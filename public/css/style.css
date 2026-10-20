@@ -1,0 +1,18 @@
+:root {
+  --text: #1f2328;
+  --muted: #59636e;
+  --background: #f6f8fa;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  color: var(--text);
+  background: var(--background);
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}

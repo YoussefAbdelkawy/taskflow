@@ -1,0 +1,8 @@
+node_modules/
+coverage/
+data/*.db
+.env
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
