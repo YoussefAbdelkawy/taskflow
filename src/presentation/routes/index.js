@@ -19,6 +19,11 @@ function createRoutes({ controllers, authenticate }) {
   router.post('/auth/logout', controllers.auth.logout);
   router.get('/auth/me', controllers.auth.me);
 
+  // FR2: recurring tasks
+  router.get('/tasks/:id/recurrence', controllers.recurrence.get);
+  router.put('/tasks/:id/recurrence', controllers.recurrence.set);
+  router.delete('/tasks/:id/recurrence', controllers.recurrence.turnOff);
+
   return router;
 }
 
