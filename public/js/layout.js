@@ -27,7 +27,7 @@ const layout = (() => {
   function renderNavigation(header) {
     const nav = element('nav', { className: 'app-nav' });
     // Declarative: one link per entry
-    nav.append(...LINKS.map((link) => element('a', link)));
+    nav.append(...LINKS.map(({ href, label }) => element('a', { href, text: label })));
     header.append(nav);
   }
 
