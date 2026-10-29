@@ -16,6 +16,9 @@ class AppError extends Error {
 /** Input is missing or invalid (becomes HTTP 400). */
 class ValidationError extends AppError {}
 
+/** The user is not logged in, or the login details are wrong (becomes HTTP 401). */
+class UnauthorizedError extends AppError {}
+
 /** The user is not allowed to do this (becomes HTTP 403). */
 class ForbiddenError extends AppError {}
 
@@ -25,4 +28,11 @@ class NotFoundError extends AppError {}
 /** The action clashes with the current state, e.g. a duplicate (becomes HTTP 409). */
 class ConflictError extends AppError {}
 
-module.exports = { AppError, ValidationError, ForbiddenError, NotFoundError, ConflictError };
+module.exports = {
+  AppError,
+  ValidationError,
+  UnauthorizedError,
+  ForbiddenError,
+  NotFoundError,
+  ConflictError,
+};
