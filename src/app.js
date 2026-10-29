@@ -10,7 +10,8 @@ function createApp(container) {
   const app = express();
   app.use(express.json());
   app.use(express.static(PUBLIC_FOLDER)); // the frontend (HTML/CSS/JS)
-  app.use('/api', createRoutes(container.controllers)); // the backend API
+  const { controllers, middleware } = container;
+  app.use('/api', createRoutes({ controllers, authenticate: middleware.authenticate })); // the backend API
   app.use(errorHandler); // must be last
   return app;
 }

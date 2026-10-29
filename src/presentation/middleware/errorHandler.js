@@ -3,6 +3,7 @@
 // any thrown error here automatically.
 const HTTP_STATUS = Object.freeze({
   ValidationError: 400,
+  UnauthorizedError: 401,
   ForbiddenError: 403,
   NotFoundError: 404,
   ConflictError: 409,

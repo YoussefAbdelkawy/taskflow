@@ -16,3 +16,62 @@ body {
   margin: 0 auto;
   padding: 24px 16px;
 }
+
+/* Shared header (filled by js/layout.js) */
+.app-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+  padding: 12px 16px;
+  background: #ffffff;
+  border-bottom: 1px solid #d0d7de;
+}
+
+.app-name {
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.app-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.app-nav a {
+  color: var(--muted);
+}
+
+.app-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+/* Login form */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 360px;
+  margin: 48px auto;
+}
+
+.login-form input {
+  padding: 8px;
+  font: inherit;
+}
+
+button {
+  padding: 8px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.form-error {
+  min-height: 1.5em;
+  color: #cf222e;
+}

@@ -4,11 +4,13 @@ const {
   ForbiddenError,
   NotFoundError,
   ConflictError,
+  UnauthorizedError,
 } = require('../../../src/business/errors/AppError');
 
 describe('errorHandler.statusFor', () => {
   it.each([
     [new ValidationError('bad input'), 400],
+    [new UnauthorizedError('Please log in'), 401],
     [new ForbiddenError('not allowed'), 403],
     [new NotFoundError('missing'), 404],
     [new ConflictError('duplicate'), 409],

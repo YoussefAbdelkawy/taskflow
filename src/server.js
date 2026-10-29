@@ -10,5 +10,6 @@ app.listen(config.port, () => {
   console.log(`TaskFlow is running on http://localhost:${config.port}`);
 });
 
-// The recurrence Scheduler (Youssef) will be started here later, e.g.
-// container.scheduler.start();
+// FR2: create recurring task instances on a timer (runs once now, then every minute).
+// Only the real server starts it; tests never do.
+container.scheduler.start();
