@@ -123,6 +123,29 @@ describe('tasks API (FR1)', () => {
     });
   });
 
+  describe('GET /api/projects/:projectId/members', () => {
+    it('a member gets the possible assignees as id, name and role only (no email, no hash)', async () => {
+      const response = await request(app)
+        .get(`/api/projects/${website.id}/members`)
+        .set('Authorization', auth.karim);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual([
+        { id: team.mona.id, name: 'Mona', role: 'MANAGER' },
+        { id: team.karim.id, name: 'Karim', role: 'MEMBER' },
+        { id: team.omar.id, name: 'Omar', role: 'MEMBER' },
+      ]);
+    });
+
+    it('NFR Security: a non-member → 403', async () => {
+      const response = await request(app)
+        .get(`/api/projects/${website.id}/members`)
+        .set('Authorization', auth.hany);
+
+      expect(response.status).toBe(403);
+    });
+  });
+
   describe('GET /api/tasks/mine', () => {
     it('US1-1: returns only my tasks', async () => {
       const karims = (await createTask('mona')).body;

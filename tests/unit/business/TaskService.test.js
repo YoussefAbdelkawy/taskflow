@@ -25,6 +25,23 @@ class InMemoryTaskRepositoryWithLists extends InMemoryTaskRepository {
   }
 }
 
+// Adds findMembers like ProjectRepository's: { userId, name, email, role } per member.
+class InMemoryProjectRepositoryWithMembers extends InMemoryProjectRepository {
+  constructor(users) {
+    super();
+    this.users = users;
+  }
+
+  findMembers(projectId) {
+    return this.members
+      .filter((member) => member.projectId === projectId)
+      .map(({ userId, role }) => {
+        const { name, email } = this.users.find((user) => user.id === userId);
+        return { userId, name, email, role };
+      });
+  }
+}
+
 // Behaves like TaskStatusHistoryRepository.findByTask: one task's entries, oldest first.
 class InMemoryHistoryRepository extends InMemoryRepository {
   findByTask(taskId) {
@@ -63,13 +80,14 @@ describe('TaskService', () => {
     new TaskService({
       taskRepository,
       historyRepository,
+      projectRepository,
       authorizationService: new AuthorizationService({ projectRepository }),
       eventPublisher,
       dependencyService,
     });
 
   beforeEach(() => {
-    projectRepository = new InMemoryProjectRepository();
+    projectRepository = new InMemoryProjectRepositoryWithMembers([mona, karim, hany, omar]);
     projectRepository.addMember({ projectId: PROJECT_ID, userId: mona.id, role: Role.MANAGER });
     projectRepository.addMember({ projectId: PROJECT_ID, userId: karim.id, role: Role.MEMBER });
     projectRepository.addMember({ projectId: PROJECT_ID, userId: omar.id, role: Role.MEMBER });
@@ -399,6 +417,20 @@ describe('TaskService', () => {
 
       it('returns an empty list to a user with no tasks', () => {
         expect(service.listMyTasks(mona)).toEqual([]);
+      });
+    });
+
+    describe('listAssignees', () => {
+      it('returns the project’s members (manager included) as id, name and role only', () => {
+        expect(service.listAssignees(PROJECT_ID, karim)).toEqual([
+          { id: mona.id, name: 'Mona', role: Role.MANAGER },
+          { id: karim.id, name: 'Karim', role: Role.MEMBER },
+          { id: omar.id, name: 'Omar', role: Role.MEMBER },
+        ]);
+      });
+
+      it('NFR Security: a user outside the project → 403', () => {
+        expect(() => service.listAssignees(PROJECT_ID, hany)).toThrow(ForbiddenError);
       });
     });
 
