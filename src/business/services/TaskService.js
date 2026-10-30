@@ -111,8 +111,7 @@ class TaskService {
    */
   changeStatus({ taskId, status, user }) {
     // Imperative: guard clauses in a fixed order (404, 403, 400, 409), then save
-    const task = this.taskRepository.findById(taskId);
-    if (!task) throw new NotFoundError(`Task ${taskId} not found`);
+    const task = this.#findTask(taskId);
     if (!this.#canChangeStatus(task, user)) {
       throw new ForbiddenError('Only the assignee or a project manager can change the status');
     }
@@ -132,6 +131,69 @@ class TaskService {
     });
     this.#publishStatusEvents(updated, user.id);
     return updated;
+  }
+
+  /**
+   * @param {number} taskId
+   * @param {{ id: number }} user
+   * @returns {object} the task
+   * requires: user is logged in
+   * effects: returns the task; throws NotFoundError if it does not exist,
+   *          ForbiddenError if user is not a member (or manager) of its project
+   * modifies: nothing
+   */
+  getTask(taskId, user) {
+    const task = this.#findTask(taskId);
+    if (!this.authorizationService.isMember(user.id, task.projectId)) {
+      throw new ForbiddenError('Only project members can see this task');
+    }
+    return task;
+  }
+
+  /**
+   * @param {number} projectId
+   * @param {{ id: number }} user
+   * @returns {object[]} the project's tasks
+   * requires: user is logged in
+   * effects: returns every task of the project; throws ForbiddenError if user is not a
+   *          member (or manager) of the project
+   * modifies: nothing
+   */
+  listProjectTasks(projectId, user) {
+    if (!this.authorizationService.isMember(user.id, projectId)) {
+      throw new ForbiddenError('Only project members can see its tasks');
+    }
+    return this.taskRepository.findByProject(projectId);
+  }
+
+  /**
+   * @param {{ id: number }} user
+   * @returns {object[]} the tasks assigned to user, from every project
+   * requires: user is logged in
+   * effects: returns only tasks whose assignee is user, so no other check is needed
+   * modifies: nothing
+   */
+  listMyTasks(user) {
+    return this.taskRepository.findByAssignee(user.id);
+  }
+
+  /**
+   * @param {number} taskId
+   * @param {{ id: number }} user
+   * @returns {object[]} the task's status changes, oldest first
+   * requires: user is logged in
+   * effects: returns the history; throws the same errors as getTask (404, 403)
+   * modifies: nothing
+   */
+  getHistory(taskId, user) {
+    const task = this.getTask(taskId, user);
+    return this.historyRepository.findByTask(task.id);
+  }
+
+  #findTask(taskId) {
+    const task = this.taskRepository.findById(taskId);
+    if (!task) throw new NotFoundError(`Task ${taskId} not found`);
+    return task;
   }
 
   // NFR Security: only the assignee or a manager of the task's project
