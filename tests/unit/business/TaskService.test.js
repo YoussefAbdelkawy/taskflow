@@ -19,6 +19,19 @@ class InMemoryTaskRepositoryWithLists extends InMemoryTaskRepository {
   findByAssignee(userId) {
     return this.findAll().filter((task) => task.assigneeId === userId);
   }
+
+  findByProject(projectId) {
+    return this.findAll().filter((task) => task.projectId === projectId);
+  }
+}
+
+// Behaves like TaskStatusHistoryRepository.findByTask: one task's entries, oldest first.
+class InMemoryHistoryRepository extends InMemoryRepository {
+  findByTask(taskId) {
+    return this.findAll()
+      .filter((entry) => entry.taskId === taskId)
+      .sort((a, b) => a.changedAt.localeCompare(b.changedAt) || a.id - b.id);
+  }
 }
 
 // Records every published event instead of calling observers.
@@ -66,7 +79,7 @@ describe('TaskService', () => {
       role: Role.MEMBER,
     });
     taskRepository = new InMemoryTaskRepositoryWithLists();
-    historyRepository = new InMemoryRepository();
+    historyRepository = new InMemoryHistoryRepository();
     eventPublisher = new RecordingPublisher();
     service = makeService();
   });
@@ -328,6 +341,95 @@ describe('TaskService', () => {
         expect(taskRepository.findById(task.id).status).toBe(TaskStatus.IN_PROGRESS);
         expect(historyRepository.findAll()).toEqual([]);
         expect(eventPublisher.events).toEqual([]);
+      });
+    });
+  });
+
+  describe('read methods (members only)', () => {
+    let karimsTask;
+    let omarsTask;
+    let otherProjectTask;
+
+    // Two tasks in project 1 (Karim's and Omar's), one in project 2 (Hany's)
+    beforeEach(() => {
+      karimsTask = service.createTask(newTask(), mona);
+      omarsTask = service.createTask(
+        newTask({ title: 'Fix the login bug', assigneeId: omar.id }),
+        mona,
+      );
+      otherProjectTask = taskRepository.create({
+        ...newTask({ projectId: OTHER_PROJECT_ID, assigneeId: hany.id }),
+        status: TaskStatus.TO_DO,
+      });
+    });
+
+    describe('getTask', () => {
+      it('returns the task to a member who is not the assignee', () => {
+        expect(service.getTask(karimsTask.id, omar)).toEqual(karimsTask);
+      });
+
+      it('returns the task to the manager', () => {
+        expect(service.getTask(karimsTask.id, mona)).toEqual(karimsTask);
+      });
+
+      it('NFR Security: a user outside the project → 403', () => {
+        expect(() => service.getTask(karimsTask.id, hany)).toThrow(ForbiddenError);
+      });
+
+      it('rejects an unknown task with 404', () => {
+        expect(() => service.getTask(999, mona)).toThrow(NotFoundError);
+      });
+    });
+
+    describe('listProjectTasks', () => {
+      it('returns only that project’s tasks to a member', () => {
+        expect(service.listProjectTasks(PROJECT_ID, karim)).toEqual([karimsTask, omarsTask]);
+      });
+
+      it('NFR Security: a user outside the project → 403', () => {
+        expect(() => service.listProjectTasks(PROJECT_ID, hany)).toThrow(ForbiddenError);
+      });
+    });
+
+    describe('listMyTasks', () => {
+      it('US1-1: returns only the tasks assigned to the user, from every project', () => {
+        expect(service.listMyTasks(karim)).toEqual([karimsTask]);
+        expect(service.listMyTasks(hany)).toEqual([otherProjectTask]);
+      });
+
+      it('returns an empty list to a user with no tasks', () => {
+        expect(service.listMyTasks(mona)).toEqual([]);
+      });
+    });
+
+    describe('getHistory', () => {
+      it('US1-2: returns the task’s status changes oldest first to any project member', () => {
+        service.changeStatus({
+          taskId: karimsTask.id,
+          status: TaskStatus.IN_PROGRESS,
+          user: karim,
+        });
+        service.changeStatus({ taskId: karimsTask.id, status: TaskStatus.DONE, user: karim });
+        service.changeStatus({ taskId: omarsTask.id, status: TaskStatus.IN_PROGRESS, user: omar });
+
+        const history = service.getHistory(karimsTask.id, omar);
+
+        expect(history.map(({ oldStatus, newStatus }) => [oldStatus, newStatus])).toEqual([
+          [TaskStatus.TO_DO, TaskStatus.IN_PROGRESS],
+          [TaskStatus.IN_PROGRESS, TaskStatus.DONE],
+        ]);
+      });
+
+      it('returns an empty list for a task that never changed', () => {
+        expect(service.getHistory(karimsTask.id, mona)).toEqual([]);
+      });
+
+      it('NFR Security: a user outside the project → 403', () => {
+        expect(() => service.getHistory(karimsTask.id, hany)).toThrow(ForbiddenError);
+      });
+
+      it('rejects an unknown task with 404', () => {
+        expect(() => service.getHistory(999, mona)).toThrow(NotFoundError);
       });
     });
   });
