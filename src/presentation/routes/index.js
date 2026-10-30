@@ -24,6 +24,14 @@ function createRoutes({ controllers, authenticate }) {
   router.put('/tasks/:id/recurrence', controllers.recurrence.set);
   router.delete('/tasks/:id/recurrence', controllers.recurrence.turnOff);
 
+  // FR1: task assignment and status (/tasks/mine must come before /tasks/:id)
+  router.post('/projects/:projectId/tasks', controllers.task.create);
+  router.get('/projects/:projectId/tasks', controllers.task.listByProject);
+  router.get('/tasks/mine', controllers.task.listMine);
+  router.get('/tasks/:id', controllers.task.getById);
+  router.patch('/tasks/:id/status', controllers.task.changeStatus);
+  router.get('/tasks/:id/history', controllers.task.getHistory);
+
   return router;
 }
 
