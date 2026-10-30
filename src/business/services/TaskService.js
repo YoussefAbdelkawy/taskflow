@@ -1,11 +1,19 @@
-const { ValidationError, ForbiddenError } = require('../errors/AppError');
+const {
+  ValidationError,
+  ForbiddenError,
+  NotFoundError,
+  ConflictError,
+} = require('../errors/AppError');
 const { TaskStatus, Priority } = require('../../domain/enums');
 const EventNames = require('../events/eventNames');
 
 // Due dates are stored as text YYYY-MM-DD (team contract)
 const DUE_DATE_FORMAT = /^\d{4}-\d{2}-\d{2}$/;
+// FR6: a blocked task cannot move to these statuses (moving back to TO_DO is always allowed)
+const STATUSES_NEEDING_UNBLOCKED = Object.freeze([TaskStatus.IN_PROGRESS, TaskStatus.DONE]);
 
 const isPriority = (value) => Object.values(Priority).includes(value);
+const isTaskStatus = (value) => Object.values(TaskStatus).includes(value);
 
 /**
  * @param {{ title: string, dueDate: string, priority: string }} fields
@@ -86,6 +94,66 @@ class TaskService {
     });
     this.eventPublisher.publish(taskEvent(EventNames.TASK_ASSIGNED, { task, actorId: user.id }));
     return task;
+  }
+
+  /**
+   * @param {{ taskId: number, status: string, user: { id: number } }} change
+   * @returns {object} the updated task
+   * requires: user is logged in
+   * effects: saves the new status, logs a history entry (old, new, who, when), publishes
+   *          TASK_STATUS_CHANGED, and TASK_COMPLETED when the new status is DONE.
+   *          Throws, in this order: NotFoundError if the task does not exist;
+   *          ForbiddenError if user is neither the assignee nor a manager of its project;
+   *          ValidationError if status is not a TaskStatus or is the task's current status;
+   *          ConflictError('Task is blocked') if a dependencyService says the task is blocked
+   *          and the new status is IN_PROGRESS or DONE
+   * modifies: the tasks and task_status_history tables; the observers of the EventPublisher
+   */
+  changeStatus({ taskId, status, user }) {
+    // Imperative: guard clauses in a fixed order (404, 403, 400, 409), then save
+    const task = this.taskRepository.findById(taskId);
+    if (!task) throw new NotFoundError(`Task ${taskId} not found`);
+    if (!this.canChangeStatus(task, user)) {
+      throw new ForbiddenError('Only the assignee or a project manager can change the status');
+    }
+    if (!isTaskStatus(status)) {
+      throw new ValidationError('Status must be TO_DO, IN_PROGRESS or DONE');
+    }
+    if (status === task.status) throw new ValidationError(`Task is already ${status}`);
+    if (this.isBlockedFrom(task, status)) throw new ConflictError('Task is blocked');
+
+    const updated = this.taskRepository.update(task.id, { status });
+    this.historyRepository.create({
+      taskId: task.id,
+      oldStatus: task.status,
+      newStatus: status,
+      changedBy: user.id,
+      changedAt: new Date().toISOString(),
+    });
+    this.publishStatusEvents(updated, user.id);
+    return updated;
+  }
+
+  // NFR Security: only the assignee or a manager of the task's project
+  canChangeStatus(task, user) {
+    return (
+      task.assigneeId === user.id || this.authorizationService.isManager(user.id, task.projectId)
+    );
+  }
+
+  // Asks FR6 only when it is wired in and only for a move that starts or finishes work
+  isBlockedFrom(task, status) {
+    if (!this.dependencyService) return false;
+    if (!STATUSES_NEEDING_UNBLOCKED.includes(status)) return false;
+    return this.dependencyService.isBlocked(task.id);
+  }
+
+  publishStatusEvents(task, actorId) {
+    this.eventPublisher.publish(taskEvent(EventNames.TASK_STATUS_CHANGED, { task, actorId }));
+    // FR2 (recurrence) listens for this one
+    if (task.status === TaskStatus.DONE) {
+      this.eventPublisher.publish(taskEvent(EventNames.TASK_COMPLETED, { task, actorId }));
+    }
   }
 }
 
