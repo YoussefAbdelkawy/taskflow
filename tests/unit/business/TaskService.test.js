@@ -5,7 +5,12 @@ const {
   InMemoryProjectRepository,
   InMemoryTaskRepository,
 } = require('../helpers/inMemoryRepositories');
-const { ForbiddenError, ValidationError } = require('../../../src/business/errors/AppError');
+const {
+  ForbiddenError,
+  ValidationError,
+  NotFoundError,
+  ConflictError,
+} = require('../../../src/business/errors/AppError');
 const { TaskStatus, Priority, Role } = require('../../../src/domain/enums');
 const EventNames = require('../../../src/business/events/eventNames');
 
@@ -32,29 +37,38 @@ const OTHER_PROJECT_ID = 2;
 const mona = { id: 10, name: 'Mona', email: 'mona@taskflow.test' }; // manager
 const karim = { id: 11, name: 'Karim', email: 'karim@taskflow.test' }; // member
 const hany = { id: 12, name: 'Hany', email: 'hany@taskflow.test' }; // member of another project only
+const omar = { id: 13, name: 'Omar', email: 'omar@taskflow.test' }; // member, not the assignee
 
 describe('TaskService', () => {
+  let projectRepository;
   let taskRepository;
+  let historyRepository;
   let eventPublisher;
   let service;
 
+  const makeService = (dependencyService) =>
+    new TaskService({
+      taskRepository,
+      historyRepository,
+      authorizationService: new AuthorizationService({ projectRepository }),
+      eventPublisher,
+      dependencyService,
+    });
+
   beforeEach(() => {
-    const projectRepository = new InMemoryProjectRepository();
+    projectRepository = new InMemoryProjectRepository();
     projectRepository.addMember({ projectId: PROJECT_ID, userId: mona.id, role: Role.MANAGER });
     projectRepository.addMember({ projectId: PROJECT_ID, userId: karim.id, role: Role.MEMBER });
+    projectRepository.addMember({ projectId: PROJECT_ID, userId: omar.id, role: Role.MEMBER });
     projectRepository.addMember({
       projectId: OTHER_PROJECT_ID,
       userId: hany.id,
       role: Role.MEMBER,
     });
     taskRepository = new InMemoryTaskRepositoryWithLists();
+    historyRepository = new InMemoryRepository();
     eventPublisher = new RecordingPublisher();
-    service = new TaskService({
-      taskRepository,
-      historyRepository: new InMemoryRepository(),
-      authorizationService: new AuthorizationService({ projectRepository }),
-      eventPublisher,
-    });
+    service = makeService();
   });
 
   const newTask = (overrides = {}) => ({
@@ -137,6 +151,184 @@ describe('TaskService', () => {
     ])('rejects a task with %s with 400', (_case, overrides) => {
       expect(() => service.createTask(newTask(overrides), mona)).toThrow(ValidationError);
       expect(taskRepository.findAll()).toEqual([]);
+    });
+  });
+
+  describe('changeStatus', () => {
+    let task;
+
+    // A TO_DO task assigned to Karim, with the TASK_ASSIGNED event cleared
+    beforeEach(() => {
+      task = service.createTask(newTask(), mona);
+      eventPublisher.events = [];
+    });
+
+    const expectUnchanged = () => {
+      expect(taskRepository.findById(task.id).status).toBe(TaskStatus.TO_DO);
+      expect(historyRepository.findAll()).toEqual([]);
+      expect(eventPublisher.events).toEqual([]);
+    };
+
+    it('US1-2: assignee changes the status → new status saved and a history entry (old, new, who, when)', () => {
+      const updated = service.changeStatus({
+        taskId: task.id,
+        status: TaskStatus.IN_PROGRESS,
+        user: karim,
+      });
+
+      expect(updated).toEqual({ ...task, status: TaskStatus.IN_PROGRESS });
+      expect(taskRepository.findById(task.id).status).toBe(TaskStatus.IN_PROGRESS);
+      const [entry] = historyRepository.findAll();
+      expect(entry).toEqual({
+        id: expect.any(Number),
+        taskId: task.id,
+        oldStatus: TaskStatus.TO_DO,
+        newStatus: TaskStatus.IN_PROGRESS,
+        changedBy: karim.id,
+        changedAt: expect.any(String),
+      });
+      expect(new Date(entry.changedAt).toISOString()).toBe(entry.changedAt);
+    });
+
+    it('US1-2: To Do → In Progress → Done logs one entry per change, in order', () => {
+      service.changeStatus({ taskId: task.id, status: TaskStatus.IN_PROGRESS, user: karim });
+      service.changeStatus({ taskId: task.id, status: TaskStatus.DONE, user: karim });
+
+      const steps = historyRepository
+        .findAll()
+        .map(({ oldStatus, newStatus }) => [oldStatus, newStatus]);
+      expect(steps).toEqual([
+        [TaskStatus.TO_DO, TaskStatus.IN_PROGRESS],
+        [TaskStatus.IN_PROGRESS, TaskStatus.DONE],
+      ]);
+    });
+
+    it('NFR Security: a manager who is not the assignee can change the status', () => {
+      service.changeStatus({ taskId: task.id, status: TaskStatus.IN_PROGRESS, user: mona });
+
+      expect(taskRepository.findById(task.id).status).toBe(TaskStatus.IN_PROGRESS);
+      expect(historyRepository.findAll()[0].changedBy).toBe(mona.id);
+    });
+
+    it('US1-3: a member who is neither assignee nor manager → 403, status unchanged', () => {
+      expect(() =>
+        service.changeStatus({ taskId: task.id, status: TaskStatus.DONE, user: omar }),
+      ).toThrow(ForbiddenError);
+      expectUnchanged();
+    });
+
+    it('US1-3: a user outside the project → 403, status unchanged', () => {
+      expect(() =>
+        service.changeStatus({ taskId: task.id, status: TaskStatus.DONE, user: hany }),
+      ).toThrow(ForbiddenError);
+      expectUnchanged();
+    });
+
+    it('NFR Security: a non-allowed user gets 403 even when the status is also invalid', () => {
+      expect(() =>
+        service.changeStatus({ taskId: task.id, status: 'IN_REVIEW', user: omar }),
+      ).toThrow(ForbiddenError);
+    });
+
+    it('rejects an unknown task with 404', () => {
+      expect(() =>
+        service.changeStatus({ taskId: 999, status: TaskStatus.DONE, user: mona }),
+      ).toThrow(NotFoundError);
+    });
+
+    it.each([['IN_REVIEW'], ['done'], [undefined]])(
+      'rejects the status %s with 400, status unchanged',
+      (status) => {
+        expect(() => service.changeStatus({ taskId: task.id, status, user: karim })).toThrow(
+          ValidationError,
+        );
+        expectUnchanged();
+      },
+    );
+
+    it('rejects changing to the status the task already has with 400, status unchanged', () => {
+      expect(() =>
+        service.changeStatus({ taskId: task.id, status: TaskStatus.TO_DO, user: karim }),
+      ).toThrow(new ValidationError('Task is already TO_DO'));
+      expectUnchanged();
+    });
+
+    it('publishes TASK_STATUS_CHANGED with the updated task, who and when', () => {
+      const updated = service.changeStatus({
+        taskId: task.id,
+        status: TaskStatus.IN_PROGRESS,
+        user: karim,
+      });
+
+      expect(eventPublisher.events).toEqual([
+        {
+          type: EventNames.TASK_STATUS_CHANGED,
+          task: updated,
+          actorId: karim.id,
+          occurredAt: expect.any(String),
+        },
+      ]);
+    });
+
+    it('completing a task publishes TASK_STATUS_CHANGED and then TASK_COMPLETED', () => {
+      const done = service.changeStatus({ taskId: task.id, status: TaskStatus.DONE, user: karim });
+
+      expect(eventPublisher.events.map((event) => event.type)).toEqual([
+        EventNames.TASK_STATUS_CHANGED,
+        EventNames.TASK_COMPLETED,
+      ]);
+      expect(eventPublisher.events[1]).toMatchObject({ task: done, actorId: karim.id });
+    });
+
+    describe('with a dependencyService (FR6, turn 3)', () => {
+      let checkedTaskIds;
+
+      // Fake: every task is blocked; remembers which task ids it was asked about
+      beforeEach(() => {
+        checkedTaskIds = [];
+        service = makeService({
+          isBlocked: (taskId) => {
+            checkedTaskIds.push(taskId);
+            return true;
+          },
+        });
+      });
+
+      it.each([[TaskStatus.IN_PROGRESS], [TaskStatus.DONE]])(
+        'a blocked task cannot move to %s → ConflictError, status unchanged',
+        (status) => {
+          expect(() => service.changeStatus({ taskId: task.id, status, user: karim })).toThrow(
+            new ConflictError('Task is blocked'),
+          );
+          expect(checkedTaskIds).toEqual([task.id]);
+          expectUnchanged();
+        },
+      );
+
+      it('a blocked task can still be moved back to TO_DO (no blocked check needed)', () => {
+        taskRepository.update(task.id, { status: TaskStatus.IN_PROGRESS }); // setup only
+
+        const updated = service.changeStatus({
+          taskId: task.id,
+          status: TaskStatus.TO_DO,
+          user: karim,
+        });
+
+        expect(updated.status).toBe(TaskStatus.TO_DO);
+        expect(checkedTaskIds).toEqual([]);
+      });
+
+      it('a same-status request is rejected with 400 before isBlocked is asked', () => {
+        taskRepository.update(task.id, { status: TaskStatus.IN_PROGRESS }); // setup only
+
+        expect(() =>
+          service.changeStatus({ taskId: task.id, status: TaskStatus.IN_PROGRESS, user: karim }),
+        ).toThrow(new ValidationError('Task is already IN_PROGRESS'));
+        expect(checkedTaskIds).toEqual([]);
+        expect(taskRepository.findById(task.id).status).toBe(TaskStatus.IN_PROGRESS);
+        expect(historyRepository.findAll()).toEqual([]);
+        expect(eventPublisher.events).toEqual([]);
+      });
     });
   });
 });
