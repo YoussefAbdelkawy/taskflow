@@ -113,14 +113,14 @@ class TaskService {
     // Imperative: guard clauses in a fixed order (404, 403, 400, 409), then save
     const task = this.taskRepository.findById(taskId);
     if (!task) throw new NotFoundError(`Task ${taskId} not found`);
-    if (!this.canChangeStatus(task, user)) {
+    if (!this.#canChangeStatus(task, user)) {
       throw new ForbiddenError('Only the assignee or a project manager can change the status');
     }
     if (!isTaskStatus(status)) {
       throw new ValidationError('Status must be TO_DO, IN_PROGRESS or DONE');
     }
     if (status === task.status) throw new ValidationError(`Task is already ${status}`);
-    if (this.isBlockedFrom(task, status)) throw new ConflictError('Task is blocked');
+    if (this.#isBlockedFrom(task, status)) throw new ConflictError('Task is blocked');
 
     const updated = this.taskRepository.update(task.id, { status });
     this.historyRepository.create({
@@ -130,25 +130,25 @@ class TaskService {
       changedBy: user.id,
       changedAt: new Date().toISOString(),
     });
-    this.publishStatusEvents(updated, user.id);
+    this.#publishStatusEvents(updated, user.id);
     return updated;
   }
 
   // NFR Security: only the assignee or a manager of the task's project
-  canChangeStatus(task, user) {
+  #canChangeStatus(task, user) {
     return (
       task.assigneeId === user.id || this.authorizationService.isManager(user.id, task.projectId)
     );
   }
 
   // Asks FR6 only when it is wired in and only for a move that starts or finishes work
-  isBlockedFrom(task, status) {
+  #isBlockedFrom(task, status) {
     if (!this.dependencyService) return false;
     if (!STATUSES_NEEDING_UNBLOCKED.includes(status)) return false;
     return this.dependencyService.isBlocked(task.id);
   }
 
-  publishStatusEvents(task, actorId) {
+  #publishStatusEvents(task, actorId) {
     this.eventPublisher.publish(taskEvent(EventNames.TASK_STATUS_CHANGED, { task, actorId }));
     // FR2 (recurrence) listens for this one
     if (task.status === TaskStatus.DONE) {
