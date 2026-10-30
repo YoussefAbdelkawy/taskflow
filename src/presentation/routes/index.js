@@ -27,6 +27,7 @@ function createRoutes({ controllers, authenticate }) {
   // FR1: task assignment and status (/tasks/mine must come before /tasks/:id)
   router.post('/projects/:projectId/tasks', controllers.task.create);
   router.get('/projects/:projectId/tasks', controllers.task.listByProject);
+  router.get('/projects/:projectId/members', controllers.task.listAssignees);
   router.get('/tasks/mine', controllers.task.listMine);
   router.get('/tasks/:id', controllers.task.getById);
   router.patch('/tasks/:id/status', controllers.task.changeStatus);

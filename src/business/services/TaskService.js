@@ -41,6 +41,7 @@ class TaskService {
    * @param {object} deps
    * @param {object} deps.taskRepository
    * @param {object} deps.historyRepository - TaskStatusHistoryRepository
+   * @param {object} deps.projectRepository - for the list of possible assignees
    * @param {import('./AuthorizationService')} deps.authorizationService
    * @param {import('../events/EventPublisher')} deps.eventPublisher
    * @param {object} [deps.dependencyService] - optional; FR6 (Ali) adds it in turn 3
@@ -48,12 +49,14 @@ class TaskService {
   constructor({
     taskRepository,
     historyRepository,
+    projectRepository,
     authorizationService,
     eventPublisher,
     dependencyService = null,
   }) {
     this.taskRepository = taskRepository;
     this.historyRepository = historyRepository;
+    this.projectRepository = projectRepository;
     this.authorizationService = authorizationService;
     this.eventPublisher = eventPublisher;
     this.dependencyService = dependencyService;
@@ -164,6 +167,25 @@ class TaskService {
       throw new ForbiddenError('Only project members can see its tasks');
     }
     return this.taskRepository.findByProject(projectId);
+  }
+
+  /**
+   * @param {number} projectId
+   * @param {{ id: number }} user
+   * @returns {{ id: number, name: string, role: string }[]} who a task can be assigned to
+   * requires: user is logged in
+   * effects: returns the project's members (managers included) with only id, name and role,
+   *          so no email ever leaves; throws ForbiddenError if user is not a member
+   * modifies: nothing
+   */
+  listAssignees(projectId, user) {
+    if (!this.authorizationService.isMember(user.id, projectId)) {
+      throw new ForbiddenError('Only project members can see its members');
+    }
+    // Declarative: keep only the fields the "New task" form needs
+    return this.projectRepository
+      .findMembers(projectId)
+      .map(({ userId, name, role }) => ({ id: userId, name, role }));
   }
 
   /**

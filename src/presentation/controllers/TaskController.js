@@ -26,6 +26,10 @@ class TaskController {
     res.json(this.taskService.listProjectTasks(Number(req.params.projectId), req.user));
   };
 
+  listAssignees = (req, res) => {
+    res.json(this.taskService.listAssignees(Number(req.params.projectId), req.user));
+  };
+
   listMine = (req, res) => {
     res.json(this.taskService.listMyTasks(req.user));
   };

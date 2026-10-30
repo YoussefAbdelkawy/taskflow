@@ -65,6 +65,7 @@ function createContainer({ databasePath, schedulerIntervalMs = config.schedulerI
   services.task = new TaskService({
     taskRepository: repositories.task,
     historyRepository: repositories.taskStatusHistory,
+    projectRepository: repositories.project,
     authorizationService: services.authorization,
     eventPublisher,
   });
