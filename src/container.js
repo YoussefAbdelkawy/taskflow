@@ -17,14 +17,18 @@ const UserRepository = require('./data-access/repositories/UserRepository');
 const ProjectRepository = require('./data-access/repositories/ProjectRepository');
 const TaskRepository = require('./data-access/repositories/TaskRepository');
 const RecurrenceRuleRepository = require('./data-access/repositories/RecurrenceRuleRepository');
+const TaskStatusHistoryRepository = require('./data-access/repositories/TaskStatusHistoryRepository');
 const SessionRepository = require('./data-access/repositories/SessionRepository');
 const PasswordHasher = require('./data-access/security/PasswordHasher');
 const EventPublisher = require('./business/events/EventPublisher');
 const AuthService = require('./business/services/AuthService');
 const RecurrenceService = require('./business/services/RecurrenceService');
+const AuthorizationService = require('./business/services/AuthorizationService');
+const TaskService = require('./business/services/TaskService');
 const HealthController = require('./presentation/controllers/HealthController');
 const AuthController = require('./presentation/controllers/AuthController');
 const RecurrenceController = require('./presentation/controllers/RecurrenceController');
+const TaskController = require('./presentation/controllers/TaskController');
 const { createAuthenticate } = require('./presentation/middleware/authenticate');
 const Scheduler = require('./presentation/scheduler/Scheduler');
 
@@ -37,6 +41,7 @@ function createContainer({ databasePath, schedulerIntervalMs = config.schedulerI
     task: new TaskRepository(db),
     recurrenceRule: new RecurrenceRuleRepository(db),
     session: new SessionRepository(),
+    taskStatusHistory: new TaskStatusHistoryRepository(db),
   };
   const passwordHasher = new PasswordHasher();
 
@@ -54,6 +59,16 @@ function createContainer({ databasePath, schedulerIntervalMs = config.schedulerI
       projectRepository: repositories.project,
     }),
   };
+  // FR1 permission checks, shared by every later service (built before them)
+  services.authorization = new AuthorizationService({ projectRepository: repositories.project });
+  // FR1: publishes through the SAME eventPublisher that RecurrenceService listens to
+  services.task = new TaskService({
+    taskRepository: repositories.task,
+    historyRepository: repositories.taskStatusHistory,
+    projectRepository: repositories.project,
+    authorizationService: services.authorization,
+    eventPublisher,
+  });
   // FR2 listens for TASK_COMPLETED (TaskService publishes it from turn 2 on)
   eventPublisher.subscribe(services.recurrence);
 
@@ -62,6 +77,7 @@ function createContainer({ databasePath, schedulerIntervalMs = config.schedulerI
     health: new HealthController(),
     auth: new AuthController({ authService: services.auth }),
     recurrence: new RecurrenceController({ recurrenceService: services.recurrence }),
+    task: new TaskController({ taskService: services.task }),
   };
   const middleware = { authenticate: createAuthenticate(services.auth) };
   // Built here, started only by server.js

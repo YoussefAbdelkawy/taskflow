@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Project – TaskFlow</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header id="app-header"></header>
+    <!-- FR1: the project's tasks, and the "New task" form for its manager (opened as project.html?id=…) -->
+    <main class="container">
+      <h1>Project tasks</h1>
+      <p id="project-error" class="form-error" role="alert"></p>
+      <ul id="task-list"></ul>
+
+      <form id="new-task-form" hidden>
+        <h2>New task</h2>
+        <label for="title">Title</label>
+        <input id="title" name="title" required />
+        <label for="description">Description</label>
+        <textarea id="description" name="description"></textarea>
+        <label for="assigneeId">Assignee</label>
+        <select id="assigneeId" name="assigneeId" required></select>
+        <label for="dueDate">Due date</label>
+        <input id="dueDate" name="dueDate" type="date" required />
+        <label for="priority">Priority</label>
+        <select id="priority" name="priority" required>
+          <option value="LOW">Low</option>
+          <option value="MEDIUM" selected>Medium</option>
+          <option value="HIGH">High</option>
+        </select>
+        <button type="submit">Create task</button>
+        <p id="new-task-message" class="form-error" role="alert"></p>
+      </form>
+    </main>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/project.js"></script>
+  </body>
+</html>

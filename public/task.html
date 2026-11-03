@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Task – TaskFlow</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header id="app-header"></header>
+    <!-- FR1: one task (opened as task.html?id=…): details, status buttons and the status history -->
+    <main class="container">
+      <p id="task-error" class="form-error" role="alert"></p>
+      <section id="task-details"></section>
+
+      <h2>Status</h2>
+      <div id="status-buttons"></div>
+      <p id="status-message" class="form-error" role="alert"></p>
+
+      <h2>History</h2>
+      <ul id="history"></ul>
+
+      <!-- FR2 (Youssef): filled by js/recurrence.js -->
+      <section id="recurrence"></section>
+      <!-- FR6 (Ali, turn 3) and FR4 (Fady, turn 4) fill these and add their own script tags -->
+      <section id="dependencies"></section>
+      <section id="comments"></section>
+    </main>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/task.js"></script>
+    <script src="js/recurrence.js"></script>
+  </body>
+</html>
