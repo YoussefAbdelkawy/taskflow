@@ -95,6 +95,23 @@ describe('tasks API (FR1)', () => {
       expect(response.status).toBe(400);
     });
 
+    it('an impossible due date (2026-99-99) → 400, nothing saved', async () => {
+      const response = await createTask('mona', newTask({ dueDate: '2026-99-99' }));
+      const list = await request(app)
+        .get(`/api/projects/${website.id}/tasks`)
+        .set('Authorization', auth.mona);
+
+      expect(response.status).toBe(400);
+      expect(list.body).toEqual([]);
+    });
+
+    it('a description that is not text → 400, not 500', async () => {
+      const response = await createTask('mona', newTask({ description: { a: 1 } }));
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({ error: 'Description must be text' });
+    });
+
     it('without a token → 401', async () => {
       const response = await request(app).post(`/api/projects/${website.id}/tasks`).send(newTask());
 

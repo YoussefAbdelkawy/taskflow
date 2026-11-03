@@ -137,6 +137,12 @@ describe('TaskService', () => {
       );
     });
 
+    it('accepts 29 February in a leap year', () => {
+      expect(service.createTask(newTask({ dueDate: '2028-02-29' }), mona).dueDate).toBe(
+        '2028-02-29',
+      );
+    });
+
     it('saves a missing description as an empty string (tasks.description is NOT NULL)', () => {
       const task = service.createTask(newTask({ description: undefined }), mona);
 
@@ -177,6 +183,12 @@ describe('TaskService', () => {
       ['no due date', { dueDate: undefined }],
       ['a due date in words', { dueDate: 'tomorrow' }],
       ['a due date as DD/MM/YYYY', { dueDate: '02/11/2026' }],
+      ['an impossible due date (month 99, day 99)', { dueDate: '2026-99-99' }],
+      ['an impossible due date (13th month)', { dueDate: '2026-13-01' }],
+      ['an impossible due date (30 February)', { dueDate: '2026-02-30' }],
+      ['29 February in a non-leap year', { dueDate: '2027-02-29' }],
+      ['a description that is an object', { description: { a: 1 } }],
+      ['a description that is a number', { description: 42 }],
       ['no priority', { priority: undefined }],
       ['a priority that is not LOW/MEDIUM/HIGH', { priority: 'URGENT' }],
     ])('rejects a task with %s with 400', (_case, overrides) => {
