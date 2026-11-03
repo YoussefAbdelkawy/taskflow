@@ -15,14 +15,26 @@ const STATUSES_NEEDING_UNBLOCKED = Object.freeze([TaskStatus.IN_PROGRESS, TaskSt
 const isPriority = (value) => Object.values(Priority).includes(value);
 const isTaskStatus = (value) => Object.values(TaskStatus).includes(value);
 
+// A real calendar day: read as UTC midnight, it must give back the same YYYY-MM-DD
+// (JavaScript turns 2026-02-30 into 2 March, and 2026-99-99 into an invalid date).
+const isRealDate = (text) => {
+  const date = new Date(`${text}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(text);
+};
+
 /**
- * @param {{ title: string, dueDate: string, priority: string }} fields
+ * @param {{ title: string, description?: string, dueDate: string, priority: string }} fields
  * effects: throws ValidationError for the first field that is missing or invalid
  */
-function checkTaskFields({ title, dueDate, priority }) {
+function checkTaskFields({ title, description, dueDate, priority }) {
   // Imperative: one guard clause per field, stop at the first problem
   if (typeof title !== 'string' || !title.trim()) throw new ValidationError('Title is required');
+  // Optional, but if given it must be text (SQLite cannot store an object: that was a 500)
+  if (typeof (description ?? '') !== 'string') {
+    throw new ValidationError('Description must be text');
+  }
   if (!DUE_DATE_FORMAT.test(dueDate)) throw new ValidationError('Due date must be YYYY-MM-DD');
+  if (!isRealDate(dueDate)) throw new ValidationError('Due date is not a real date');
   // Declarative: "is it one of the Priority values?" instead of three comparisons
   if (!isPriority(priority)) throw new ValidationError('Priority must be LOW, MEDIUM or HIGH');
 }
@@ -83,7 +95,7 @@ class TaskService {
     if (!this.authorizationService.isMember(assigneeId, projectId)) {
       throw new ValidationError('The assignee must be a member of the project');
     }
-    checkTaskFields({ title, dueDate, priority });
+    checkTaskFields({ title, description, dueDate, priority });
 
     // Only these fields are saved, so a request cannot set status or recurrence itself
     const task = this.taskRepository.create({
