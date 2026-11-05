@@ -19,10 +19,20 @@ function createRoutes({ controllers, authenticate }) {
   router.post('/auth/logout', controllers.auth.logout);
   router.get('/auth/me', controllers.auth.me);
 
+  // Projects and project membership (Fady, turn 4)
+  router.post('/projects', controllers.project.create);
+  router.get('/projects', controllers.project.listMine);
+  router.get('/projects/:id', controllers.project.getById);
+  router.post('/projects/:id/members', controllers.project.addMember);
+
   // FR2: recurring tasks
   router.get('/tasks/:id/recurrence', controllers.recurrence.get);
   router.put('/tasks/:id/recurrence', controllers.recurrence.set);
   router.delete('/tasks/:id/recurrence', controllers.recurrence.turnOff);
+
+  // FR6: task dependencies
+  router.post('/tasks/:id/dependencies', controllers.dependency.create);
+  router.get('/tasks/:id/dependencies', controllers.dependency.list);
 
   // FR1: task assignment and status (/tasks/mine must come before /tasks/:id)
   router.post('/projects/:projectId/tasks', controllers.task.create);
@@ -32,6 +42,10 @@ function createRoutes({ controllers, authenticate }) {
   router.get('/tasks/:id', controllers.task.getById);
   router.patch('/tasks/:id/status', controllers.task.changeStatus);
   router.get('/tasks/:id/history', controllers.task.getHistory);
+
+  // FR4: task comments (Fady, turn 4)
+  router.post('/tasks/:id/comments', controllers.comment.add);
+  router.get('/tasks/:id/comments', controllers.comment.list);
 
   return router;
 }
