@@ -1,0 +1,106 @@
+// Fady's project flow through the real app and an in-memory SQLite database.
+const request = require('supertest');
+const { createContainer } = require('../../src/container');
+const { createApp } = require('../../src/app');
+
+const PASSWORD = 'secret123';
+
+function addTeam(container) {
+  const { user, project } = container.repositories;
+  const passwordHash = container.passwordHasher.hash(PASSWORD);
+  const addUser = (name) =>
+    user.create({ name, email: `${name.toLowerCase()}@taskflow.test`, passwordHash });
+  const team = {
+    mona: addUser('Mona'),
+    karim: addUser('Karim'),
+    omar: addUser('Omar'),
+    hany: addUser('Hany'),
+  };
+  const website = project.create({ name: 'Website', description: '', startDate: '2026-11-05' });
+  project.addMember({ projectId: website.id, userId: team.mona.id, role: 'MANAGER' });
+  project.addMember({ projectId: website.id, userId: team.karim.id, role: 'MEMBER' });
+  project.addMember({ projectId: website.id, userId: team.omar.id, role: 'MEMBER' });
+  return { team, website };
+}
+
+describe('projects API (Fady turn)', () => {
+  let app;
+  let container;
+  let team;
+  let website;
+  const auth = {};
+
+  beforeEach(async () => {
+    container = createContainer({ databasePath: ':memory:' });
+    ({ team, website } = addTeam(container));
+    app = createApp(container);
+    for (const name of Object.keys(team)) {
+      const response = await request(app)
+        .post('/api/auth/login')
+        .send({ email: `${name}@taskflow.test`, password: PASSWORD });
+      auth[name] = `Bearer ${response.body.token}`;
+    }
+  });
+
+  describe('projects API', () => {
+    it('US M1: the project creator becomes its manager', async () => {
+      const response = await request(app)
+        .post('/api/projects')
+        .set('Authorization', auth.mona)
+        .send({ name: 'Roadmap', description: 'Next quarter' });
+
+      expect(response.status).toBe(201);
+      expect(response.body).toMatchObject({ name: 'Roadmap', description: 'Next quarter' });
+      expect(
+        container.repositories.project.findMemberRole({
+          projectId: response.body.id,
+          userId: team.mona.id,
+        }),
+      ).toBe('MANAGER');
+    });
+
+    it('allows a manager to add a member by email', async () => {
+      const project = await request(app)
+        .post('/api/projects')
+        .set('Authorization', auth.mona)
+        .send({ name: 'Roadmap', description: '' });
+      const response = await request(app)
+        .post(`/api/projects/${project.body.id}/members`)
+        .set('Authorization', auth.mona)
+        .send({ email: team.karim.email, role: 'MEMBER' });
+
+      expect(project.status).toBe(201);
+      expect(response.status).toBe(201);
+      expect(
+        container.repositories.project.findMemberRole({
+          projectId: project.body.id,
+          userId: team.karim.id,
+        }),
+      ).toBe('MEMBER');
+    });
+
+    it('rejects a member who tries to add someone, without saving the membership', async () => {
+      const response = await request(app)
+        .post(`/api/projects/${website.id}/members`)
+        .set('Authorization', auth.karim)
+        .send({ email: team.hany.email, role: 'MEMBER' });
+
+      expect(response.status).toBe(403);
+      expect(
+        container.repositories.project.findMemberRole({
+          projectId: website.id,
+          userId: team.hany.id,
+        }),
+      ).toBeNull();
+    });
+
+    it('returns 409 when a manager adds an existing project member', async () => {
+      const response = await request(app)
+        .post(`/api/projects/${website.id}/members`)
+        .set('Authorization', auth.mona)
+        .send({ email: team.karim.email, role: 'MEMBER' });
+
+      expect(response.status).toBe(409);
+    });
+  });
+});
