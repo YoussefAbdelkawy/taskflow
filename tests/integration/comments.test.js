@@ -42,6 +42,16 @@ describe('comments API (Fady turn)', () => {
     }
   });
 
+  it('serves the comments script on the task page', async () => {
+    const page = await request(app).get('/task.html');
+    const script = await request(app).get('/js/comments.js');
+
+    expect(page.status).toBe(200);
+    expect(page.text).toContain('<section id="comments"></section>');
+    expect(page.text).toContain('js/comments.js');
+    expect(script.status).toBe(200);
+  });
+
   const createTask = async () => {
     const response = await request(app)
       .post(`/api/projects/${website.id}/tasks`)
