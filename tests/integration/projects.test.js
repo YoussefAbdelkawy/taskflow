@@ -3,13 +3,14 @@ const request = require('supertest');
 const { createContainer } = require('../../src/container');
 const { createApp } = require('../../src/app');
 
-const PASSWORD = 'secret123';
-
 function addTeam(container) {
   const { user, project } = container.repositories;
-  const passwordHash = container.passwordHasher.hash(PASSWORD);
   const addUser = (name) =>
-    user.create({ name, email: `${name.toLowerCase()}@taskflow.test`, passwordHash });
+    user.create({
+      name,
+      email: `${name.toLowerCase()}@taskflow.test`,
+      passwordHash: 'test-hash',
+    });
   const team = {
     mona: addUser('Mona'),
     karim: addUser('Karim'),
@@ -30,15 +31,13 @@ describe('projects API (Fady turn)', () => {
   let website;
   const auth = {};
 
-  beforeEach(async () => {
+  beforeEach(() => {
     container = createContainer({ databasePath: ':memory:' });
     ({ team, website } = addTeam(container));
     app = createApp(container);
     for (const name of Object.keys(team)) {
-      const response = await request(app)
-        .post('/api/auth/login')
-        .send({ email: `${name}@taskflow.test`, password: PASSWORD });
-      auth[name] = `Bearer ${response.body.token}`;
+      const token = container.repositories.session.create(team[name].id);
+      auth[name] = `Bearer ${token}`;
     }
   });
 
