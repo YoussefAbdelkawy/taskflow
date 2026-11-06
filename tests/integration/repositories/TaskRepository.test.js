@@ -80,6 +80,58 @@ describe('TaskRepository', () => {
     ).toBeNull();
   });
 
+  describe('findTasks (FR5: filtering happens in the SQL query)', () => {
+    let highTodo;
+    let highDone;
+    let lowTodo;
+
+    beforeEach(() => {
+      highTodo = tasks.create(taskData({ assigneeId: 1, priority: 'HIGH', status: 'TO_DO' }));
+      highDone = tasks.create(taskData({ assigneeId: 1, priority: 'HIGH', status: 'DONE' }));
+      lowTodo = tasks.create(taskData({ assigneeId: 1, priority: 'LOW', status: 'TO_DO' }));
+      tasks.create(taskData({ assigneeId: 2, priority: 'HIGH', status: 'TO_DO' }));
+      tasks.create(taskData({ assigneeId: null, priority: 'HIGH', status: 'TO_DO' }));
+    });
+
+    const ids = (list) => list.map((task) => task.id).sort((a, b) => a - b);
+
+    it('with only an assignee returns all of that user’s tasks', () => {
+      expect(ids(tasks.findTasks({ assigneeId: 1 }))).toEqual(ids([highTodo, highDone, lowTodo]));
+    });
+
+    it('US5-1: filters by priority', () => {
+      expect(ids(tasks.findTasks({ assigneeId: 1, priority: 'HIGH' }))).toEqual(
+        ids([highTodo, highDone]),
+      );
+    });
+
+    it('filters by status', () => {
+      expect(ids(tasks.findTasks({ assigneeId: 1, status: 'TO_DO' }))).toEqual(
+        ids([highTodo, lowTodo]),
+      );
+    });
+
+    it('combines priority and status', () => {
+      expect(tasks.findTasks({ assigneeId: 1, priority: 'HIGH', status: 'DONE' })).toEqual([
+        highDone,
+      ]);
+    });
+
+    it('never returns another user’s tasks', () => {
+      const found = tasks.findTasks({ assigneeId: 1, priority: 'HIGH' });
+
+      expect(found.every((task) => task.assigneeId === 1)).toBe(true);
+    });
+
+    it('US5-3: returns an empty array when nothing matches', () => {
+      expect(tasks.findTasks({ assigneeId: 1, priority: 'MEDIUM' })).toEqual([]);
+    });
+
+    it('treats a filter value as data, not SQL', () => {
+      expect(tasks.findTasks({ assigneeId: 1, priority: "HIGH' OR '1'='1" })).toEqual([]);
+    });
+  });
+
   it('inserting two tasks with the same (recurrence_id, due_date) throws', () => {
     // Checked in the terminal first: node:sqlite throws a plain Error with
     //   message: 'UNIQUE constraint failed: tasks.recurrence_id, tasks.due_date'
