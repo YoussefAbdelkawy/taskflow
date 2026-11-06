@@ -45,6 +45,20 @@ class TaskController {
     );
   };
 
+  // FR5: GET /api/tasks?priority=HIGH&status=TO_DO&sort=asc (all optional).
+  // An empty value (the page's "All" option) means "no filter"; the service checks the rest.
+  filterTasks = (req, res) => {
+    const { priority, status, sort } = req.query;
+    const optional = (value) => (value === '' ? undefined : value);
+    res.json(
+      this.taskService.getTasks(
+        { priority: optional(priority), status: optional(status) },
+        optional(sort),
+        req.user,
+      ),
+    );
+  };
+
   getHistory = (req, res) => {
     res.json(this.taskService.getHistory(Number(req.params.id), req.user));
   };

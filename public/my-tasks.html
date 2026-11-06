@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>My tasks – TaskFlow</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header id="app-header"></header>
+    <!-- FR5: the logged-in user's tasks, filtered by priority and status, sorted by due date -->
+    <main class="container">
+      <h1>My tasks</h1>
+      <form id="filter-form">
+        <label for="priority">Priority</label>
+        <select id="priority" name="priority">
+          <option value="">All</option>
+          <option value="HIGH">High</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="LOW">Low</option>
+        </select>
+        <label for="status">Status</label>
+        <select id="status" name="status">
+          <option value="">All</option>
+          <option value="TO_DO">To Do</option>
+          <option value="IN_PROGRESS">In Progress</option>
+          <option value="DONE">Done</option>
+        </select>
+        <label for="sort">Due date</label>
+        <select id="sort" name="sort">
+          <option value="asc">Earliest first</option>
+          <option value="desc">Latest first</option>
+        </select>
+      </form>
+      <p id="my-tasks-error" class="form-error" role="alert"></p>
+      <ul id="my-task-list"></ul>
+    </main>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/my-tasks.js"></script>
+  </body>
+</html>
