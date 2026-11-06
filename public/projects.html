@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Projects – TaskFlow</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header id="app-header"></header>
+    <main class="container">
+      <h1>Projects</h1>
+      <p id="projects-error" class="form-error" role="alert"></p>
+      <ul id="project-list"></ul>
+
+      <form id="new-project-form">
+        <h2>New project</h2>
+        <label for="project-name">Name</label>
+        <input id="project-name" name="name" required />
+        <label for="project-description">Description</label>
+        <textarea id="project-description" name="description"></textarea>
+        <button type="submit">Create project</button>
+        <p id="new-project-message" class="form-error" role="alert"></p>
+      </form>
+    </main>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/projects.js"></script>
+  </body>
+</html>
