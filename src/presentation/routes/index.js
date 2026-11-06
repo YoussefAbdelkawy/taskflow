@@ -37,6 +37,9 @@ function createRoutes({ controllers, authenticate }) {
   router.patch('/tasks/:id/status', controllers.task.changeStatus);
   router.get('/tasks/:id/history', controllers.task.getHistory);
 
+  // FR5: filter & sort my tasks (?priority=&status=&sort=asc|desc)
+  router.get('/tasks', controllers.task.filterTasks);
+
   return router;
 }
 
