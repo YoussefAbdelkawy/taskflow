@@ -24,6 +24,10 @@ function createRoutes({ controllers, authenticate }) {
   router.put('/tasks/:id/recurrence', controllers.recurrence.set);
   router.delete('/tasks/:id/recurrence', controllers.recurrence.turnOff);
 
+  // FR6: task dependencies
+  router.post('/tasks/:id/dependencies', controllers.dependency.create);
+  router.get('/tasks/:id/dependencies', controllers.dependency.list);
+
   // FR1: task assignment and status (/tasks/mine must come before /tasks/:id)
   router.post('/projects/:projectId/tasks', controllers.task.create);
   router.get('/projects/:projectId/tasks', controllers.task.listByProject);
