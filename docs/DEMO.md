@@ -11,5 +11,3 @@ Use `npm run seed`, then `npm start`, and open `http://localhost:3000`. All seed
 7. Return to task A and show its status history with timestamps.
 
 The seeded project also has tasks due today, tomorrow, and overdue. On startup the scheduler creates one due-soon reminder for an open task due today or tomorrow, and one overdue alert for its assignee and project manager. Repeated checks do not duplicate alerts. Completed tasks receive no further alerts.
-
-Timing of the full browser run is pending integration of Fady's project and comment pages, which are absent from the current branch base.
