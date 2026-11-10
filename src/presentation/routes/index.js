@@ -1,5 +1,6 @@
 // Maps URLs to controller methods. Every feature adds its routes here.
 const express = require('express');
+const { NotFoundError } = require('../../business/errors/AppError');
 
 /**
  * @param {{ controllers: object, authenticate: Function }} deps - built in src/container.js
@@ -54,6 +55,11 @@ function createRoutes({ controllers, authenticate }) {
   router.get('/notifications', controllers.notification.listMine);
   router.get('/notifications/unread-count', controllers.notification.unreadCount);
   router.patch('/notifications/:id/read', controllers.notification.markRead);
+
+  // 4. Anything else under /api: a JSON 404 through errorHandler (must stay last)
+  router.use((req) => {
+    throw new NotFoundError(`No such API route: ${req.method} ${req.originalUrl}`);
+  });
 
   return router;
 }

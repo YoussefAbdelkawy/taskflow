@@ -8,10 +8,22 @@ const HTTP_STATUS = Object.freeze({
   NotFoundError: 404,
   ConflictError: 409,
 });
+const BAD_REQUEST = 400;
 const INTERNAL_SERVER_ERROR = 500;
+// What express.json() reports when the request body is not valid JSON
+const MALFORMED_JSON = 'entity.parse.failed';
+const isMalformedJson = (error) => error.type === MALFORMED_JSON;
 
 // Lab 4: pattern matching with a lookup table instead of a long if/else chain.
-const statusFor = (error) => HTTP_STATUS[error.name] ?? INTERNAL_SERVER_ERROR;
+const statusFor = (error) => {
+  if (isMalformedJson(error)) return BAD_REQUEST;
+  return HTTP_STATUS[error.name] ?? INTERNAL_SERVER_ERROR;
+};
+
+const messageFor = (error, status) => {
+  if (isMalformedJson(error)) return 'Request body must be valid JSON';
+  return status === INTERNAL_SERVER_ERROR ? 'Something went wrong' : error.message;
+};
 
 // Express recognises error middleware by its 4 parameters, so `_next` must stay.
 // eslint-disable-next-line max-params
@@ -19,8 +31,7 @@ function errorHandler(error, _req, res, _next) {
   const status = statusFor(error);
   if (status === INTERNAL_SERVER_ERROR) console.error(error);
 
-  const message = status === INTERNAL_SERVER_ERROR ? 'Something went wrong' : error.message;
-  res.status(status).json({ error: message });
+  res.status(status).json({ error: messageFor(error, status) });
 }
 
 module.exports = { errorHandler, statusFor };
