@@ -11,3 +11,11 @@ Use `npm run seed`, then `npm start`, and open `http://localhost:3000`. All seed
 7. Return to task A and show its status history with timestamps.
 
 The seeded project also has tasks due today, tomorrow, and overdue. On startup the scheduler creates one due-soon reminder for an open task due today or tomorrow, and one overdue alert for its assignee and project manager. Repeated checks do not duplicate alerts. Completed tasks receive no further alerts.
+
+## Checking the API with Postman
+
+`docs/postman/TaskFlow.postman_collection.json` calls every endpoint in the same order as the demo above and checks each status code and response body.
+
+1. `npm run seed`, then `npm start`.
+2. In Postman: **Import** the file, open the collection, then **Run collection**.
+3. Expected result: 69 requests, 118 checks, 0 failed. Run `npm run seed` again before a second run.

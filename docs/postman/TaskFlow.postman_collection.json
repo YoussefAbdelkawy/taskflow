@@ -1,0 +1,2372 @@
+{
+  "info": {
+    "name": "TaskFlow API (Milestone 2)",
+    "description": "Every endpoint of the TaskFlow beta, in demo order, with the expected status and body checks.\n\nBefore running: `npm run seed`, then `npm start`. Run the whole collection top to bottom (Run collection). Re-seed before running it again.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "monaToken",
+      "value": ""
+    },
+    {
+      "key": "karimToken",
+      "value": ""
+    },
+    {
+      "key": "hanyToken",
+      "value": ""
+    },
+    {
+      "key": "karimId",
+      "value": ""
+    },
+    {
+      "key": "projectId",
+      "value": ""
+    },
+    {
+      "key": "taskA",
+      "value": ""
+    },
+    {
+      "key": "taskB",
+      "value": ""
+    },
+    {
+      "key": "notificationId",
+      "value": ""
+    },
+    {
+      "key": "unreadBefore",
+      "value": ""
+    },
+    {
+      "key": "tomorrow",
+      "value": ""
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Due dates are relative to today, so the collection works on any day.",
+          "const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);",
+          "pm.collectionVariables.set(\"tomorrow\", tomorrow);"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Health and login",
+      "description": "Public routes, then one token per demo user. Run this folder first: every later request uses these tokens.",
+      "item": [
+        {
+          "name": "Health check (no login needed)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"status is ok\", () => { const body = pm.response.json(); pm.expect(body.status).to.eql(\"ok\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Protected route without a token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "projects"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"error message is \\\"Please log in\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"Please log in\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Wrong password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"mona@taskflow.test\",\n  \"password\": \"wrong\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"error message is \\\"Wrong email or password\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"Wrong email or password\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Missing email and password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error message is \\\"Email and password are required\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"Email and password are required\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Body that is not valid JSON",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{bad"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error message is \\\"Request body must be valid JSON\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"Request body must be valid JSON\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Log in as Mona",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"mona@taskflow.test\",\n  \"password\": \"Password123!\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"monaToken\", pm.response.json().token);",
+                  "pm.test(\"returns a token and never the password hash\", () => { const body = pm.response.json(); pm.expect(body.token).to.be.a(\"string\"); pm.expect(body.user).to.not.have.property(\"passwordHash\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Log in as Karim",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"karim@taskflow.test\",\n  \"password\": \"Password123!\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"karimToken\", pm.response.json().token);",
+                  "pm.test(\"returns a token and never the password hash\", () => { const body = pm.response.json(); pm.expect(body.token).to.be.a(\"string\"); pm.expect(body.user).to.not.have.property(\"passwordHash\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Log in as Hany",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"hany@taskflow.test\",\n  \"password\": \"Password123!\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"hanyToken\", pm.response.json().token);",
+                  "pm.test(\"returns a token and never the password hash\", () => { const body = pm.response.json(); pm.expect(body.token).to.be.a(\"string\"); pm.expect(body.user).to.not.have.property(\"passwordHash\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Who am I",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"karimId\", pm.response.json().id);",
+                  "pm.test(\"is Karim\", () => { const body = pm.response.json(); pm.expect(body.name).to.eql(\"Karim\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. Projects and members",
+      "description": "Mona creates a project and adds Karim. Hany stays outside it and is used for the 403 checks.",
+      "item": [
+        {
+          "name": "Create a project (creator becomes MANAGER)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "projects"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Demo\",\n  \"description\": \"Milestone 2 check\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"projectId\", pm.response.json().id);",
+                  "pm.test(\"has an id and the name\", () => { const body = pm.response.json(); pm.expect(body.id).to.be.a(\"number\"); pm.expect(body.name).to.eql(\"Postman Demo\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Empty project name",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "projects"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"  \"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error message is \\\"Project name is required\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"Project name is required\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add Karim as a member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/members",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "projects", "{{projectId}}", "members"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"karim@taskflow.test\",\n  \"role\": \"MEMBER\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Karim is a MEMBER\", () => { const body = pm.response.json(); pm.expect(body.name).to.eql(\"Karim\"); pm.expect(body.role).to.eql(\"MEMBER\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add Karim a second time",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/members",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "projects", "{{projectId}}", "members"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"karim@taskflow.test\",\n  \"role\": \"MEMBER\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"error message is \\\"User is already a project member\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"User is already a project member\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A member cannot add members",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/members",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "projects", "{{projectId}}", "members"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"hany@taskflow.test\",\n  \"role\": \"MEMBER\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"error message is \\\"Only a project manager can add members\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"Only a project manager can add members\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/members",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "projects", "{{projectId}}", "members"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nobody@taskflow.test\",\n  \"role\": \"MEMBER\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"error message is \\\"User not found\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"User not found\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List my projects",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "projects"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"includes the new project\", () => { const body = pm.response.json(); pm.expect(body.map((p) => p.id)).to.include(pm.collectionVariables.get(\"projectId\")); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get one project as a member",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "projects", "{{projectId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test(\"status is 200\", () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get one project as an outsider",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hanyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "projects", "{{projectId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test(\"status is 403\", () => pm.response.to.have.status(403));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List possible assignees (no emails leave)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/members",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "projects", "{{projectId}}", "members"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"two members, id/name/role only\", () => { const body = pm.response.json(); pm.expect(body).to.have.length(2); pm.expect(body[0]).to.have.all.keys(\"id\", \"name\", \"role\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. FR1 Create and assign tasks",
+      "description": "US1-1: a manager creates a task and assigns it. Only managers may create; the assignee must be in the project.",
+      "item": [
+        {
+          "name": "Create task A for Karim (HIGH)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "projects", "{{projectId}}", "tasks"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Task A\",\n  \"assigneeId\": {{karimId}},\n  \"dueDate\": \"{{tomorrow}}\",\n  \"priority\": \"HIGH\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"taskA\", pm.response.json().id);",
+                  "pm.test(\"starts as TO_DO\", () => { const body = pm.response.json(); pm.expect(body.status).to.eql(\"TO_DO\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create task B for Karim (LOW)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "projects", "{{projectId}}", "tasks"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Task B\",\n  \"assigneeId\": {{karimId}},\n  \"dueDate\": \"{{tomorrow}}\",\n  \"priority\": \"LOW\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"taskB\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A member cannot create tasks",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "projects", "{{projectId}}", "tasks"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Nope\",\n  \"assigneeId\": {{karimId}},\n  \"dueDate\": \"{{tomorrow}}\",\n  \"priority\": \"LOW\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"error message is \\\"Only a project manager can create tasks\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"Only a project manager can create tasks\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Impossible due date (30 February)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "projects", "{{projectId}}", "tasks"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Bad date\",\n  \"assigneeId\": {{karimId}},\n  \"dueDate\": \"2026-02-30\",\n  \"priority\": \"LOW\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error message is \\\"Due date is not a real date\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"Due date is not a real date\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown priority",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "projects", "{{projectId}}", "tasks"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Bad priority\",\n  \"assigneeId\": {{karimId}},\n  \"dueDate\": \"{{tomorrow}}\",\n  \"priority\": \"URGENT\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error message is \\\"Priority must be LOW, MEDIUM or HIGH\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"Priority must be LOW, MEDIUM or HIGH\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Assignee outside the project",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "projects", "{{projectId}}", "tasks"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Bad assignee\",\n  \"assigneeId\": 5,\n  \"dueDate\": \"{{tomorrow}}\",\n  \"priority\": \"LOW\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error message is \\\"The assignee must be a member of the project\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"The assignee must be a member of the project\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List the project tasks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "projects", "{{projectId}}", "tasks"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"two tasks\", () => { const body = pm.response.json(); pm.expect(body).to.have.length(2); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get task A",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskA}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskA}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test(\"status is 200\", () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "An outsider cannot read task A",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hanyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskA}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskA}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test(\"status is 403\", () => pm.response.to.have.status(403));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Task that does not exist",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "999999"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test(\"status is 404\", () => pm.response.to.have.status(404));"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. FR2 Recurring tasks",
+      "description": "US2-1: a manager makes a task repeat. The next copy is created later, in folder 8.",
+      "item": [
+        {
+          "name": "Make task A repeat weekly",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskA}}/recurrence",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskA}}", "recurrence"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"frequency\": \"WEEKLY\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"weekly and active\", () => { const body = pm.response.json(); pm.expect(body.frequency).to.eql(\"WEEKLY\"); pm.expect(body.isActive).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown frequency",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskA}}/recurrence",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskA}}", "recurrence"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"frequency\": \"YEARLY\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error message is \\\"Unknown frequency\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"Unknown frequency\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A member cannot change recurrence",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskA}}/recurrence",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskA}}", "recurrence"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"frequency\": \"DAILY\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test(\"status is 403\", () => pm.response.to.have.status(403));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read the recurrence as a member",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskA}}/recurrence",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskA}}", "recurrence"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"still weekly\", () => { const body = pm.response.json(); pm.expect(body.frequency).to.eql(\"WEEKLY\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. FR6 Task dependencies",
+      "description": "Task B depends on task A, so B is blocked until A is DONE. Cycles and duplicates are refused.",
+      "item": [
+        {
+          "name": "B depends on A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskB}}/dependencies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskB}}", "dependencies"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dependsOnId\": {{taskA}}\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test(\"status is 201\", () => pm.response.to.have.status(201));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Same dependency again",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskB}}/dependencies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskB}}", "dependencies"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dependsOnId\": {{taskA}}\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"error message is \\\"Dependency already exists\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"Dependency already exists\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A depends on B would close a cycle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskA}}/dependencies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskA}}", "dependencies"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dependsOnId\": {{taskB}}\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"error message is \\\"Circular dependency\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"Circular dependency\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A task cannot depend on itself",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskA}}/dependencies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskA}}", "dependencies"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dependsOnId\": {{taskA}}\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error message is \\\"A task cannot depend on itself\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"A task cannot depend on itself\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A member cannot add dependencies",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskB}}/dependencies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskB}}", "dependencies"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dependsOnId\": {{taskA}}\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test(\"status is 403\", () => pm.response.to.have.status(403));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B is shown as blocked",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskB}}/dependencies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskB}}", "dependencies"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"isBlocked is true\", () => { const body = pm.response.json(); pm.expect(body.isBlocked).to.eql(true); pm.expect(body.prerequisites).to.have.length(1); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Blocked B cannot start",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskB}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskB}}", "status"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"error message is \\\"Task is blocked\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"Task is blocked\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. FR3 Notifications",
+      "description": "Karim was notified when the two tasks were assigned. Only the owner can mark a notification as read.",
+      "item": [
+        {
+          "name": "Unread count for Karim",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/unread-count",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "unread-count"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"unreadBefore\", pm.response.json().count);",
+                  "pm.test(\"at least the two new assignments\", () => { const body = pm.response.json(); pm.expect(body.count).to.be.at.least(2); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List my notifications (newest first)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"notificationId\", pm.response.json()[0].id);",
+                  "pm.test(\"newest is an unread ASSIGNED notification\", () => { const body = pm.response.json(); pm.expect(body[0].type).to.eql(\"ASSIGNED\"); pm.expect(body[0].isRead).to.eql(false); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Another user cannot mark it as read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/{{notificationId}}/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "{{notificationId}}", "read"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test(\"status is 403\", () => pm.response.to.have.status(403));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mark it as read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/{{notificationId}}/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "{{notificationId}}", "read"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"isRead is true\", () => { const body = pm.response.json(); pm.expect(body.isRead).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unread count went down by one",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/unread-count",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "unread-count"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"one fewer\", () => { const body = pm.response.json(); pm.expect(body.count).to.eql(Number(pm.collectionVariables.get(\"unreadBefore\")) - 1); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Notification that does not exist",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/999999/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "999999", "read"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test(\"status is 404\", () => pm.response.to.have.status(404));"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. FR5 Filter and sort my tasks",
+      "description": "US5-1 filter, US5-2 sort, US5-3 empty result. A user only ever sees their own tasks.",
+      "item": [
+        {
+          "name": "My HIGH tasks, earliest first",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks?priority=HIGH&sort=asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks"],
+              "query": [
+                {
+                  "key": "priority",
+                  "value": "HIGH"
+                },
+                {
+                  "key": "sort",
+                  "value": "asc"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"all HIGH, all mine, sorted ascending\", () => { const body = pm.response.json(); pm.expect(body.every((t) => t.priority === \"HIGH\")).to.eql(true); pm.expect(body.every((t) => t.assigneeId === Number(pm.collectionVariables.get(\"karimId\")))).to.eql(true); const dates = body.map((t) => t.dueDate); pm.expect(dates).to.eql([...dates].sort()); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My tasks, latest first",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks?sort=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks"],
+              "query": [
+                {
+                  "key": "sort",
+                  "value": "desc"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"sorted descending\", () => { const body = pm.response.json(); const dates = body.map((t) => t.dueDate); pm.expect(dates).to.eql([...dates].sort().reverse()); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "No match gives an empty list, not an error",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hanyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks?priority=LOW&status=DONE",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks"],
+              "query": [
+                {
+                  "key": "priority",
+                  "value": "LOW"
+                },
+                {
+                  "key": "status",
+                  "value": "DONE"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"empty array\", () => { const body = pm.response.json(); pm.expect(body).to.eql([]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown priority value",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks?priority=URGENT",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks"],
+              "query": [
+                {
+                  "key": "priority",
+                  "value": "URGENT"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test(\"status is 400\", () => pm.response.to.have.status(400));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown sort value",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks?sort=sideways",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks"],
+              "query": [
+                {
+                  "key": "sort",
+                  "value": "sideways"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error message is \\\"Sort must be asc or desc\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"Sort must be asc or desc\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "All tasks assigned to me",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/mine",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "mine"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test(\"status is 200\", () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. FR4 Comments and status workflow",
+      "description": "US1-2: the assignee moves the task. Every change is written to the history. Members comment on the task.",
+      "item": [
+        {
+          "name": "Karim starts task A",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskA}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskA}}", "status"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"now IN_PROGRESS\", () => { const body = pm.response.json(); pm.expect(body.status).to.eql(\"IN_PROGRESS\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Same status again",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskA}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskA}}", "status"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error message is \\\"Task is already IN_PROGRESS\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"Task is already IN_PROGRESS\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskA}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskA}}", "status"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"FINISHED\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test(\"status is 400\", () => pm.response.to.have.status(400));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "An outsider cannot change the status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hanyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskA}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskA}}", "status"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"DONE\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test(\"status is 403\", () => pm.response.to.have.status(403));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add a comment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskA}}/comments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskA}}", "comments"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Started work on this\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"has the author name and a timestamp\", () => { const body = pm.response.json(); pm.expect(body.name).to.eql(\"Karim\"); pm.expect(body.createdAt).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Empty comment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskA}}/comments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskA}}", "comments"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"   \"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error message is \\\"Comment cannot be empty\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"Comment cannot be empty\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "An outsider cannot comment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hanyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskA}}/comments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskA}}", "comments"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"hello\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test(\"status is 403\", () => pm.response.to.have.status(403));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List the comments (oldest first)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskA}}/comments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskA}}", "comments"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"one comment\", () => { const body = pm.response.json(); pm.expect(body).to.have.length(1); pm.expect(body[0].content).to.eql(\"Started work on this\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "8. Completing a task: the features working together",
+      "description": "One PATCH to DONE triggers three things: the history entry (FR1), the next weekly copy (FR2, through the Observer), and task B becoming unblocked (FR6).",
+      "item": [
+        {
+          "name": "Karim finishes task A",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskA}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskA}}", "status"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"DONE\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test(\"status is 200\", () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR2: next week's copy of task A now exists",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/mine",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "mine"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"an open copy of Task A due 7 days later\", () => { const body = pm.response.json(); const original = body.find((t) => t.id === Number(pm.collectionVariables.get(\"taskA\"))); const copy = body.find((t) => t.title === \"Task A\" && t.status === \"TO_DO\" && t.recurrenceId === original.recurrenceId); pm.expect(copy, \"no copy found\").to.be.an(\"object\"); const days = (new Date(copy.dueDate) - new Date(original.dueDate)) / 86400000; pm.expect(days).to.eql(7); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR6: task B is no longer blocked",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskB}}/dependencies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskB}}", "dependencies"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"isBlocked is false\", () => { const body = pm.response.json(); pm.expect(body.isBlocked).to.eql(false); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR6: B can start now",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskB}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskB}}", "status"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test(\"status is 200\", () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR1: history of task A has both moves, with who and when",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskA}}/history",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskA}}", "history"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"two entries in order\", () => { const body = pm.response.json(); pm.expect(body.map((h) => h.newStatus)).to.eql([\"IN_PROGRESS\", \"DONE\"]); pm.expect(body[0].changedByName).to.eql(\"Karim\"); pm.expect(body[0].changedAt).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FR2: turn recurrence off",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskA}}/recurrence",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskA}}", "recurrence"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"no longer active\", () => { const body = pm.response.json(); pm.expect(body.isActive).to.eql(false); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "9. Logout and unknown routes",
+      "description": "",
+      "item": [
+        {
+          "name": "Unknown API route",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/does-not-exist",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "does-not-exist"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test(\"status is 404\", () => pm.response.to.have.status(404));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Log out Hany",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hanyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test(\"status is 204\", () => pm.response.to.have.status(204));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Hany's token no longer works",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hanyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"error message is \\\"Please log in\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"Please log in\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
