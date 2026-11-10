@@ -55,4 +55,17 @@ describe('Scheduler', () => {
     expect(errorSpy).toHaveBeenCalledTimes(2);
     scheduler.stop();
   });
+
+  it('checks notifications on startup and on every interval', () => {
+    const recurrenceService = fakeService();
+    const notificationService = { sendReminders: jest.fn() };
+    const scheduler = new Scheduler({ recurrenceService, notificationService, intervalMs: 60000 });
+
+    scheduler.start();
+    jest.advanceTimersByTime(60000);
+
+    expect(notificationService.sendReminders).toHaveBeenCalledTimes(2);
+    expect(notificationService.sendReminders.mock.calls[0][0]).toBeInstanceOf(Date);
+    scheduler.stop();
+  });
 });
