@@ -36,6 +36,14 @@ class InMemoryTaskRepository extends InMemoryRepository {
     const isMatch = (task) => task.recurrenceId === recurrenceId && task.dueDate === dueDate;
     return this.findAll().find(isMatch) ?? null;
   }
+
+  // Like TaskRepository.findTasks: a filter that is undefined is not applied
+  findTasks({ assigneeId, priority, status }) {
+    const filter = Object.entries({ assigneeId, priority, status }).filter(
+      ([, value]) => value !== undefined,
+    );
+    return this.findAll().filter((task) => filter.every(([field, value]) => task[field] === value));
+  }
 }
 
 class InMemoryRecurrenceRuleRepository extends InMemoryRepository {

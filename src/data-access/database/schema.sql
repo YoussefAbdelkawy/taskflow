@@ -42,6 +42,9 @@ CREATE TABLE IF NOT EXISTS tasks (
   UNIQUE (recurrence_id, due_date)
 );
 
+-- FR5 NFR Performance: "my tasks" filtered by priority/status and sorted by due date
+CREATE INDEX IF NOT EXISTS idx_tasks_filter ON tasks(assignee_id, priority, status, due_date);
+
 CREATE TABLE IF NOT EXISTS task_status_history (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,

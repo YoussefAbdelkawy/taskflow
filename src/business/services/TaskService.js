@@ -6,6 +6,7 @@ const {
 } = require('../errors/AppError');
 const { TaskStatus, Priority } = require('../../domain/enums');
 const EventNames = require('../events/eventNames');
+const { sortByDueDate, SortOrder } = require('../rules/taskSorting');
 
 // Due dates are stored as text YYYY-MM-DD (team contract)
 const DUE_DATE_FORMAT = /^\d{4}-\d{2}-\d{2}$/;
@@ -14,6 +15,7 @@ const STATUSES_NEEDING_UNBLOCKED = Object.freeze([TaskStatus.IN_PROGRESS, TaskSt
 
 const isPriority = (value) => Object.values(Priority).includes(value);
 const isTaskStatus = (value) => Object.values(TaskStatus).includes(value);
+const isSortOrder = (value) => Object.values(SortOrder).includes(value);
 
 // A real calendar day: read as UTC midnight, it must give back the same YYYY-MM-DD
 // (JavaScript turns 2026-02-30 into 2 March, and 2026-99-99 into an invalid date).
@@ -209,6 +211,33 @@ class TaskService {
    */
   listMyTasks(user) {
     return this.taskRepository.findByAssignee(user.id);
+  }
+
+  /**
+   * FR5 (sequence diagram): filter in the repository query, then sort here.
+   * @param {{ priority?: string, status?: string }} filter - each one optional
+   * @param {'asc' | 'desc'} [sortOrder='asc'] - by due date: earliest or latest first
+   * @param {{ id: number }} user - the logged-in user (req.user)
+   * @returns {object[]} user's own tasks that match the filter, sorted by due date;
+   *          an empty array when nothing matches (US5-3)
+   * requires: user is logged in
+   * effects: returns only tasks assigned to user, never anyone else's; throws
+   *          ValidationError if priority, status or sortOrder is given but not a valid value
+   * modifies: nothing
+   */
+  getTasks({ priority, status }, sortOrder = SortOrder.ASC, user) {
+    // Imperative: check each optional value with a guard clause before touching the database
+    if (priority !== undefined && !isPriority(priority)) {
+      throw new ValidationError('Priority must be LOW, MEDIUM or HIGH');
+    }
+    if (status !== undefined && !isTaskStatus(status)) {
+      throw new ValidationError('Status must be TO_DO, IN_PROGRESS or DONE');
+    }
+    if (!isSortOrder(sortOrder)) throw new ValidationError('Sort must be asc or desc');
+
+    // The assignee always comes from the login, so a user can only ever see their own tasks
+    const tasks = this.taskRepository.findTasks({ assigneeId: user.id, priority, status });
+    return sortByDueDate(tasks, sortOrder);
   }
 
   /**

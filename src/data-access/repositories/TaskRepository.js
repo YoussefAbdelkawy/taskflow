@@ -72,6 +72,25 @@ class TaskRepository extends BaseRepository {
       .map(toTask);
   }
 
+  /**
+   * FR5: one SQL query that adds a WHERE condition only for the filters that were given.
+   * Column names come from COLUMNS (our code); every value goes through a ? placeholder.
+   * @param {{ assigneeId?: number, priority?: string, status?: string }} filter
+   * @returns {object[]} the matching tasks, in id order (the service sorts them)
+   */
+  findTasks({ assigneeId, priority, status }) {
+    // Declarative: keep the filters that have a value, then turn each into "column = ?"
+    const given = Object.entries({ assigneeId, priority, status }).filter(
+      ([, value]) => value !== undefined,
+    );
+    const where = given.map(([field]) => `${COLUMNS[field]} = ?`).join(' AND ');
+    const sql = `SELECT * FROM tasks${where ? ` WHERE ${where}` : ''} ORDER BY id`;
+    return this.db
+      .prepare(sql)
+      .all(...given.map(([, value]) => value))
+      .map(toTask);
+  }
+
   /** @returns {object | null} the instance of a recurrence with the latest due date */
   findLatestByRecurrence(recurrenceId) {
     return toTask(

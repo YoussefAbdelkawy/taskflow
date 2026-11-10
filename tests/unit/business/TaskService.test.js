@@ -477,4 +477,87 @@ describe('TaskService', () => {
       });
     });
   });
+
+  describe('getTasks (FR5 filter & sort)', () => {
+    const save = (fields) =>
+      taskRepository.create({ ...newTask(), status: TaskStatus.TO_DO, ...fields });
+    const titles = (list) => list.map((task) => task.title);
+
+    beforeEach(() => {
+      save({ title: 'High late', priority: Priority.HIGH, dueDate: '2026-12-01' });
+      save({ title: 'High early', priority: Priority.HIGH, dueDate: '2026-11-02' });
+      save({
+        title: 'Medium done',
+        priority: Priority.MEDIUM,
+        status: TaskStatus.DONE,
+        dueDate: '2026-11-05',
+      });
+      save({ title: 'Low', priority: Priority.LOW, dueDate: '2026-11-20' });
+      save({ title: 'Omar high', assigneeId: omar.id, priority: Priority.HIGH });
+    });
+
+    it('US5-1: filter by High → only High priority tasks are shown', () => {
+      const tasks = service.getTasks({ priority: Priority.HIGH }, 'asc', karim);
+
+      expect(titles(tasks)).toEqual(['High early', 'High late']);
+      expect(tasks.every((task) => task.priority === Priority.HIGH)).toBe(true);
+    });
+
+    it('US5-2: sort by due date ascending → the earliest due date appears first', () => {
+      expect(titles(service.getTasks({}, 'asc', karim))).toEqual([
+        'High early',
+        'Medium done',
+        'Low',
+        'High late',
+      ]);
+    });
+
+    it('sort by due date descending → the latest due date appears first', () => {
+      expect(titles(service.getTasks({}, 'desc', karim))).toEqual([
+        'High late',
+        'Low',
+        'Medium done',
+        'High early',
+      ]);
+    });
+
+    it('filters by status, and by priority and status together', () => {
+      expect(titles(service.getTasks({ status: TaskStatus.DONE }, 'asc', karim))).toEqual([
+        'Medium done',
+      ]);
+      expect(
+        service.getTasks({ priority: Priority.HIGH, status: TaskStatus.DONE }, 'asc', karim),
+      ).toEqual([]);
+    });
+
+    it('US5-3: a filter that matches no tasks → an empty list, not an error', () => {
+      expect(() => service.getTasks({ priority: Priority.LOW }, 'asc', omar)).not.toThrow();
+      expect(service.getTasks({ priority: Priority.LOW }, 'asc', omar)).toEqual([]);
+    });
+
+    it('only ever returns the logged-in user’s own tasks', () => {
+      expect(titles(service.getTasks({ priority: Priority.HIGH }, 'asc', omar))).toEqual([
+        'Omar high',
+      ]);
+      expect(service.getTasks({}, 'asc', hany)).toEqual([]);
+    });
+
+    it('defaults to ascending when no sort order is given', () => {
+      expect(titles(service.getTasks({}, undefined, karim))[0]).toBe('High early');
+    });
+
+    it('rejects an invalid priority with 400', () => {
+      expect(() => service.getTasks({ priority: 'URGENT' }, 'asc', karim)).toThrow(ValidationError);
+    });
+
+    it('rejects an invalid status with 400', () => {
+      expect(() => service.getTasks({ status: 'IN_REVIEW' }, 'asc', karim)).toThrow(
+        ValidationError,
+      );
+    });
+
+    it('rejects an invalid sort order with 400', () => {
+      expect(() => service.getTasks({}, 'sideways', karim)).toThrow(ValidationError);
+    });
+  });
 });
