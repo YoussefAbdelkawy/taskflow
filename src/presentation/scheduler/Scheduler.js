@@ -4,8 +4,9 @@
  * right away on start, so instances missed while the server was down are created on restart.
  */
 class Scheduler {
-  constructor({ recurrenceService, intervalMs }) {
+  constructor({ recurrenceService, notificationService = null, intervalMs }) {
     this.recurrenceService = recurrenceService;
+    this.notificationService = notificationService;
     this.intervalMs = intervalMs;
     this.timer = null;
   }
@@ -24,10 +25,17 @@ class Scheduler {
   }
 
   runOnce() {
+    const now = new Date();
     try {
-      this.recurrenceService.runDue(new Date());
+      this.recurrenceService.runDue(now);
     } catch (error) {
       console.error('Scheduler: creating recurring tasks failed:', error); // keep the server running
+    }
+    if (!this.notificationService) return;
+    try {
+      this.notificationService.sendReminders(now);
+    } catch (error) {
+      console.error('Scheduler: sending reminders failed:', error);
     }
   }
 }

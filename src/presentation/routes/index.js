@@ -50,6 +50,11 @@ function createRoutes({ controllers, authenticate }) {
   router.post('/tasks/:id/comments', controllers.comment.add);
   router.get('/tasks/:id/comments', controllers.comment.list);
 
+  // FR3: in-app notifications
+  router.get('/notifications', controllers.notification.listMine);
+  router.get('/notifications/unread-count', controllers.notification.unreadCount);
+  router.patch('/notifications/:id/read', controllers.notification.markRead);
+
   return router;
 }
 

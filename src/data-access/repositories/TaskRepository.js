@@ -91,6 +91,14 @@ class TaskRepository extends BaseRepository {
       .map(toTask);
   }
 
+  findOpenDueBefore(dateTime) {
+    const cutoff = dateTime.toISOString().split('T')[0];
+    return this.db
+      .prepare("SELECT * FROM tasks WHERE status <> 'DONE' AND due_date <= ? ORDER BY due_date, id")
+      .all(cutoff)
+      .map(toTask);
+  }
+
   /** @returns {object | null} the instance of a recurrence with the latest due date */
   findLatestByRecurrence(recurrenceId) {
     return toTask(
