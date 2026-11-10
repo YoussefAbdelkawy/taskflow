@@ -64,4 +64,11 @@ describe('FR1 pages', () => {
   it.each(['/js/project.js', '/js/task.js'])('serves %s', async (url) => {
     expect((await request(app).get(url)).status).toBe(200);
   });
+
+  it('task.html loads every script exactly once (a second copy would run each widget twice)', async () => {
+    const { text } = await request(app).get('/task.html');
+    const sources = [...text.matchAll(/<script src="([^"]+)"/g)].map(([, src]) => src);
+
+    expect(sources).toEqual([...new Set(sources)]);
+  });
 });
