@@ -25,15 +25,18 @@ A web app where project managers create projects, assign tasks with due dates, a
 git clone <our-repo-url>
 cd taskflow
 npm install
+npm run seed
 npm start
 ```
 
-4. Open <http://localhost:3000>. You should see **"Server status: ok"**.
+4. Open <http://localhost:3000> and log in as `mona@taskflow.test` (manager) or `karim@taskflow.test` (member). Every seeded user has the password `Password123!`. The home page then shows **"Server status: ok"**.
+5. Follow **[docs/DEMO.md](docs/DEMO.md)** for the full Milestone 2 walkthrough and the Postman collection.
 
 ## Everyday commands
 
 | Command                 | What it does                                                        |
 | ----------------------- | ------------------------------------------------------------------- |
+| `npm run seed`          | Deletes all data and loads the demo users, project and tasks        |
 | `npm run dev`           | Starts the server and restarts it every time you save a file        |
 | `npm test`              | Runs all tests                                                      |
 | `npm run test:coverage` | Runs tests and shows how much code they cover                       |

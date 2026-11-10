@@ -97,13 +97,14 @@ class NotificationService extends TaskObserver {
   }
 
   #sendOverdue(task, createdAt) {
+    // Declarative: the project's members, kept if they are managers, reduced to their ids
     const managers = this.projectRepository
       .findMembers(task.projectId)
       .filter(({ role }) => role === Role.MANAGER)
       .map(({ userId }) => userId);
     const recipients = new Set([task.assigneeId, ...managers]);
     recipients.delete(null);
-    // Declarative: notify each distinct recipient once, even if a manager is the assignee.
+    // A Set holds each recipient once, even if a manager is also the assignee
     for (const userId of recipients) {
       this.#notifyOnce({
         userId,
