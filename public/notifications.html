@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Notifications – TaskFlow</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header id="app-header"></header>
+    <main class="container">
+      <h1>Notifications</h1>
+      <p id="notifications-error" class="form-error" role="alert"></p>
+      <ul id="notification-list" class="notification-list"></ul>
+    </main>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script>
+      (() => {
+        const list = document.getElementById('notification-list');
+        const pageError = document.getElementById('notifications-error');
+
+        function notificationItem(notification) {
+          const item = document.createElement('li');
+          item.className = 'notification-item';
+          const type = document.createElement('span');
+          type.className = `badge badge-${notification.type.toLowerCase().replace('_', '-')}`;
+          type.textContent = notification.type.replace('_', ' ');
+          const link = document.createElement('a');
+          link.href = `task.html?id=${notification.taskId}`;
+          link.textContent = notification.message;
+          const time = document.createElement('time');
+          time.dateTime = notification.createdAt;
+          time.textContent = new Date(notification.createdAt).toLocaleString();
+          item.append(type, link, time);
+          if (!notification.isRead) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = 'Mark as read';
+            button.addEventListener('click', () => markRead(notification.id));
+            item.append(button);
+          }
+          return item;
+        }
+
+        async function load() {
+          const notifications = await api.get('/notifications');
+          if (!notifications.length) {
+            list.textContent = 'No notifications yet';
+            return;
+          }
+          list.replaceChildren(...notifications.map(notificationItem));
+        }
+
+        async function markRead(id) {
+          pageError.textContent = '';
+          try {
+            await api.patch(`/notifications/${id}/read`);
+            await load();
+            await layout.refreshUnreadCount();
+          } catch (error) {
+            pageError.textContent = error.message;
+          }
+        }
+
+        layout.userReady.then(load).catch((error) => {
+          pageError.textContent = error.message;
+        });
+      })();
+    </script>
+  </body>
+</html>

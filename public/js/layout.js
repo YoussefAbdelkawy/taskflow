@@ -3,6 +3,7 @@
 // Fills <header id="app-header"> on every page: app name, links, the user's name, Logout.
 // Other scripts can wait for the logged-in user with layout.userReady.
 const layout = (() => {
+  const NOTIFICATION_POLL_MS = 3000;
   const LINKS = [
     { href: 'index.html', label: 'Home' },
     { href: 'projects.html', label: 'Projects' },
@@ -10,6 +11,7 @@ const layout = (() => {
     { href: 'notifications.html', label: 'Notifications' },
   ];
   const isLoginPage = location.pathname.endsWith('/login.html');
+  let unreadCountElement = null;
 
   function element(tag, { className, text, href } = {}) {
     const node = document.createElement(tag);
@@ -42,11 +44,30 @@ const layout = (() => {
 
   function renderUser(header, user) {
     const box = element('div', { className: 'app-user' });
+    const bell = element('a', {
+      className: 'notification-bell',
+      text: '🔔 ',
+      href: 'notifications.html',
+    });
+    unreadCountElement = element('span', { className: 'notification-count', text: '0' });
+    bell.append(unreadCountElement);
+    bell.setAttribute('aria-label', 'Notifications, 0 unread');
     const button = element('button', { className: 'button-secondary', text: 'Logout' });
     button.type = 'button';
     button.addEventListener('click', logout);
-    box.append(element('span', { className: 'app-user-name', text: user.name }), button);
+    box.append(bell, element('span', { className: 'app-user-name', text: user.name }), button);
     header.append(box);
+  }
+
+  async function refreshUnreadCount() {
+    if (!unreadCountElement) return;
+    try {
+      const { count } = await api.get('/notifications/unread-count');
+      unreadCountElement.textContent = String(count);
+      unreadCountElement.parentElement.setAttribute('aria-label', `Notifications, ${count} unread`);
+    } catch {
+      unreadCountElement.textContent = '?';
+    }
   }
 
   async function init() {
@@ -58,9 +79,11 @@ const layout = (() => {
     if (header) {
       renderNavigation(header);
       renderUser(header, user);
+      refreshUnreadCount();
+      setInterval(refreshUnreadCount, NOTIFICATION_POLL_MS);
     }
     return user;
   }
 
-  return { userReady: init() };
+  return { userReady: init(), refreshUnreadCount };
 })();

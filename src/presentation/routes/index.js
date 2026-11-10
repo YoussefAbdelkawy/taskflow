@@ -40,6 +40,11 @@ function createRoutes({ controllers, authenticate }) {
   // FR5: filter & sort my tasks (?priority=&status=&sort=asc|desc)
   router.get('/tasks', controllers.task.filterTasks);
 
+  // FR3: in-app notifications
+  router.get('/notifications', controllers.notification.listMine);
+  router.get('/notifications/unread-count', controllers.notification.unreadCount);
+  router.patch('/notifications/:id/read', controllers.notification.markRead);
+
   return router;
 }
 

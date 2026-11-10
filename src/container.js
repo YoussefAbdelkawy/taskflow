@@ -20,6 +20,7 @@ const RecurrenceRuleRepository = require('./data-access/repositories/RecurrenceR
 const TaskStatusHistoryRepository = require('./data-access/repositories/TaskStatusHistoryRepository');
 const SessionRepository = require('./data-access/repositories/SessionRepository');
 const TaskDependencyRepository = require('./data-access/repositories/TaskDependencyRepository');
+const NotificationRepository = require('./data-access/repositories/NotificationRepository');
 
 const PasswordHasher = require('./data-access/security/PasswordHasher');
 const EventPublisher = require('./business/events/EventPublisher');
@@ -28,12 +29,14 @@ const RecurrenceService = require('./business/services/RecurrenceService');
 const AuthorizationService = require('./business/services/AuthorizationService');
 const TaskService = require('./business/services/TaskService');
 const DependencyService = require('./business/services/DependencyService');
+const NotificationService = require('./business/services/NotificationService');
 
 const HealthController = require('./presentation/controllers/HealthController');
 const AuthController = require('./presentation/controllers/AuthController');
 const RecurrenceController = require('./presentation/controllers/RecurrenceController');
 const TaskController = require('./presentation/controllers/TaskController');
 const DependencyController = require('./presentation/controllers/DependencyController');
+const NotificationController = require('./presentation/controllers/NotificationController');
 
 const { createAuthenticate } = require('./presentation/middleware/authenticate');
 const Scheduler = require('./presentation/scheduler/Scheduler');
@@ -49,6 +52,7 @@ function createContainer({ databasePath, schedulerIntervalMs = config.schedulerI
     session: new SessionRepository(),
     taskStatusHistory: new TaskStatusHistoryRepository(db),
     taskDependency: new TaskDependencyRepository(db),
+    notification: new NotificationRepository(db),
   };
   const passwordHasher = new PasswordHasher();
 
@@ -83,8 +87,14 @@ function createContainer({ databasePath, schedulerIntervalMs = config.schedulerI
     eventPublisher,
     dependencyService: services.dependency,
   });
+  services.notification = new NotificationService({
+    notificationRepository: repositories.notification,
+    taskRepository: repositories.task,
+    projectRepository: repositories.project,
+  });
   // FR2 listens for TASK_COMPLETED (TaskService publishes it from turn 2 on)
   eventPublisher.subscribe(services.recurrence);
+  eventPublisher.subscribe(services.notification);
 
   // 3. Presentation
   const controllers = {
@@ -93,11 +103,13 @@ function createContainer({ databasePath, schedulerIntervalMs = config.schedulerI
     recurrence: new RecurrenceController({ recurrenceService: services.recurrence }),
     task: new TaskController({ taskService: services.task }),
     dependency: new DependencyController({ dependencyService: services.dependency }),
+    notification: new NotificationController({ notificationService: services.notification }),
   };
   const middleware = { authenticate: createAuthenticate(services.auth) };
   // Built here, started only by server.js
   const scheduler = new Scheduler({
     recurrenceService: services.recurrence,
+    notificationService: services.notification,
     intervalMs: schedulerIntervalMs,
   });
 
