@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TaskFlow API docs</title>
+    <link rel="stylesheet" href="/api-docs/swagger-ui.css" />
+  </head>
+  <body>
+    <div id="swagger-ui"></div>
+    <!-- Served from node_modules/swagger-ui-dist, so the page works without internet -->
+    <script src="/api-docs/swagger-ui-bundle.js"></script>
+    <script>
+      window.ui = SwaggerUIBundle({
+        url: '/api-docs/openapi.json',
+        dom_id: '#swagger-ui',
+        persistAuthorization: true,
+      });
+    </script>
+  </body>
+</html>

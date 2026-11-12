@@ -52,11 +52,13 @@ class ProjectService {
    * modifies: project_members
    */
   addMember({ projectId, email, role }, user) {
+    // Imperative: guard clauses in a fixed order (404, 403, 400, 409), then save
     const project = this.projectRepository.findById(projectId);
     if (!project) throw new NotFoundError(`Project ${projectId} not found`);
     if (!this.authorizationService.isManager(user.id, projectId)) {
       throw new ForbiddenError('Only a project manager can add members');
     }
+    // Declarative: "is it one of the Role values?" instead of comparing each role
     if (!Object.values(Role).includes(role)) {
       throw new ValidationError('Role must be MANAGER or MEMBER');
     }
