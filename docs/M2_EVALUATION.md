@@ -64,7 +64,7 @@ the files listed — evaluators usually say "show me in the code".
 
 - **Explain the architecture.** Three layers + domain; each calls only the one below; ESLint enforces it (`eslint.config.js`). Walk one request through the layers (see ARCHITECTURE.md §1).
 - **What is dependency injection, where is it?** `src/container.js` creates every object and passes dependencies into constructors. Services never `new` a repository, so tests can pass an in-memory one.
-- **Why do controllers have no try/catch?** Services throw `AppError` subclasses (`src/business/errors/AppError.js`); Express 5 forwards thrown errors to `errorHandler.js`, which maps the error name to a status with a lookup table.
+- **Why do controllers have no try/catch?** Services throw `AppError` subclasses (`src/business/errors/AppError.js`); Express 5 forwards thrown errors to `errorHandler.js`, which maps the error name to a status with a lookup table. Unexpected errors become a generic 500 so internals never leak; invalid JSON → 400 and a body over 100 KB → 413, both as JSON.
 - **Imperative vs declarative — show one of each in your code.** Imperative = _how_, step by step (guard clauses, loops). Declarative = _what_ (`filter`/`map`/`some`, SQL). Grep for the markers.
 - **How did you test it?** TDD: a failing `test:` commit, then the `feat:` commit. Unit tests use in-memory repositories; integration tests use Supertest on the real app with a `:memory:` SQLite database.
 
@@ -86,6 +86,7 @@ Files: `src/business/services/TaskService.js`, `src/business/services/Authorizat
 - _Walk through `changeStatus`._ Guard clauses in a fixed order — 404 → 403 → 400 → 409 (blocked) — then update, write a history row (old, new, who, when), publish events. Why that order: never reveal details to someone not allowed to see the task.
 - _Why a separate `AuthorizationService`?_ The same "is manager / is member" checks are needed by tasks, projects, comments and dependencies; one place avoids duplicated rules.
 - _Why is `/tasks/mine` registered before `/tasks/:id`?_ Express matches routes in order; otherwise "mine" would be read as an id.
+- _Why does `GET /api/projects/999/tasks` answer 403, not 404?_ The membership check runs first. A non-member gets the same answer whether the project exists or not, so outsiders cannot discover which projects exist.
 
 ### Mostafa — FR5 filter and sort
 
