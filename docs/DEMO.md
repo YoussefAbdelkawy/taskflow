@@ -12,6 +12,10 @@ Use `npm run seed`, then `npm start`, and open `http://localhost:3000`. All seed
 
 The seeded project also has tasks due today, tomorrow, and overdue. On startup the scheduler creates one due-soon reminder for an open task due today or tomorrow, and one overdue alert for its assignee and project manager. Repeated checks do not duplicate alerts. Completed tasks receive no further alerts.
 
+## Trying the API in Swagger
+
+Open `http://localhost:3000/api-docs`. Run **POST /api/auth/login** with **Try it out**, copy the `token`, click **Authorize**, paste it, and every other endpoint can be called from the page. The page works without internet.
+
 ## Checking the API with Postman
 
 `docs/postman/TaskFlow.postman_collection.json` calls every endpoint in the same order as the demo above and checks each status code and response body.

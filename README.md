@@ -31,6 +31,9 @@ npm start
 
 4. Open <http://localhost:3000> and log in as `mona@taskflow.test` (manager) or `karim@taskflow.test` (member). Every seeded user has the password `Password123!`. The home page then shows **"Server status: ok"**.
 5. Follow **[docs/DEMO.md](docs/DEMO.md)** for the full Milestone 2 walkthrough and the Postman collection.
+6. Open <http://localhost:3000/api-docs> to browse and try every endpoint in **Swagger UI**.
+
+Preparing for an evaluation? Read **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** (design → code) and **[docs/M2_EVALUATION.md](docs/M2_EVALUATION.md)** (rubric checklist, demo script, questions per team member).
 
 ## Everyday commands
 
