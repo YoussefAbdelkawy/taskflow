@@ -89,6 +89,15 @@ describe('login API', () => {
     expect(response.body).toEqual({ error: 'Request body must be valid JSON' });
   });
 
+  it('a body over the 100 KB limit → 413 with a JSON error, not a 500', async () => {
+    const response = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'x'.repeat(200 * 1024), password: 'x' });
+
+    expect(response.status).toBe(413);
+    expect(response.body).toEqual({ error: 'Request body is too large' });
+  });
+
   it('an unknown API URL → 404 as JSON, like every other error', async () => {
     const { token } = (await login()).body;
     const response = await request(app)
