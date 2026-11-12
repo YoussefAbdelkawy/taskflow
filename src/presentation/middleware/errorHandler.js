@@ -8,20 +8,22 @@ const HTTP_STATUS = Object.freeze({
   NotFoundError: 404,
   ConflictError: 409,
 });
-const BAD_REQUEST = 400;
 const INTERNAL_SERVER_ERROR = 500;
-// What express.json() reports when the request body is not valid JSON
-const MALFORMED_JSON = 'entity.parse.failed';
-const isMalformedJson = (error) => error.type === MALFORMED_JSON;
+// What express.json() reports (error.type) when it cannot read the request body
+const BODY_ERRORS = Object.freeze({
+  'entity.parse.failed': { status: 400, message: 'Request body must be valid JSON' },
+  'entity.too.large': { status: 413, message: 'Request body is too large' },
+});
+const bodyErrorFor = (error) =>
+  Object.hasOwn(BODY_ERRORS, error.type) ? BODY_ERRORS[error.type] : null;
 
 // Lab 4: pattern matching with a lookup table instead of a long if/else chain.
-const statusFor = (error) => {
-  if (isMalformedJson(error)) return BAD_REQUEST;
-  return HTTP_STATUS[error.name] ?? INTERNAL_SERVER_ERROR;
-};
+const statusFor = (error) =>
+  bodyErrorFor(error)?.status ?? HTTP_STATUS[error.name] ?? INTERNAL_SERVER_ERROR;
 
 const messageFor = (error, status) => {
-  if (isMalformedJson(error)) return 'Request body must be valid JSON';
+  const bodyError = bodyErrorFor(error);
+  if (bodyError) return bodyError.message;
   return status === INTERNAL_SERVER_ERROR ? 'Something went wrong' : error.message;
 };
 

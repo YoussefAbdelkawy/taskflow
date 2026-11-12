@@ -35,6 +35,8 @@ const projectId = idParam('projectId', 'Project id');
 const notLoggedIn = error('Missing or invalid token');
 const notAllowed = error('Logged in, but not allowed (not a member / not the manager)');
 const notFound = error('No such resource');
+// Checked before existence on purpose, so outsiders cannot learn which project ids exist
+const notMemberOrNoProject = error('Not a member (or manager) of this project, or no such project');
 const invalid = error('Invalid input');
 
 const values = (enumObject) => Object.values(enumObject);
@@ -275,8 +277,7 @@ const paths = {
       responses: {
         200: reply('Members', list('Member')),
         401: notLoggedIn,
-        403: notAllowed,
-        404: notFound,
+        403: notMemberOrNoProject,
       },
     },
   },
@@ -303,8 +304,7 @@ const paths = {
         201: reply('Created; the assignee gets an ASSIGNED notification', ref('Task')),
         400: invalid,
         401: notLoggedIn,
-        403: notAllowed,
-        404: notFound,
+        403: notMemberOrNoProject,
       },
     },
     get: {
@@ -314,8 +314,7 @@ const paths = {
       responses: {
         200: reply('Tasks', list('Task')),
         401: notLoggedIn,
-        403: notAllowed,
-        404: notFound,
+        403: notMemberOrNoProject,
       },
     },
   },
@@ -539,7 +538,8 @@ module.exports = {
     description:
       'Milestone 2 backend. Run `npm run seed` first; every seeded user has the password ' +
       '`Password123!` (mona@taskflow.test is a manager, karim@taskflow.test a member). ' +
-      'Call POST /api/auth/login, then paste the token into **Authorize**.',
+      'Call POST /api/auth/login, then paste the token into **Authorize**. ' +
+      'Every error is JSON `{ "error": "..." }`; a body over 100 KB is refused with 413.',
   },
   servers: [{ url: '/' }],
   security: [{ bearerAuth: [] }],
