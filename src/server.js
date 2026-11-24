@@ -2,6 +2,12 @@
 const config = require('./config');
 const { createContainer } = require('./container');
 const { createApp } = require('./app');
+const { seedIfEmpty } = require('./data-access/database/seed');
+
+// Deployment (render.yaml): the free server starts with an empty disk, so load the demo data
+if (process.env.SEED_ON_EMPTY === 'true' && seedIfEmpty(config.databasePath)) {
+  console.log('Empty database: loaded the demo data');
+}
 
 const container = createContainer({ databasePath: config.databasePath });
 const app = createApp(container);
