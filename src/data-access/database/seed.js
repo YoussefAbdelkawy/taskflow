@@ -5,6 +5,7 @@ const { createConnection } = require('./connection');
 const UserRepository = require('../repositories/UserRepository');
 const ProjectRepository = require('../repositories/ProjectRepository');
 const TaskRepository = require('../repositories/TaskRepository');
+const TaskStatusHistoryRepository = require('../repositories/TaskStatusHistoryRepository');
 const PasswordHasher = require('../security/PasswordHasher');
 const { TaskStatus, Priority, Role } = require('../../domain/enums');
 
@@ -71,6 +72,34 @@ const TASKS = Object.freeze([
     priority: Priority.LOW,
     status: TaskStatus.DONE,
     dueInDays: -5,
+    completedDaysAgo: 6,
+  },
+  {
+    title: 'Collect the old site analytics',
+    description: 'Top pages and search terms from the last year',
+    assignee: 'Salma',
+    priority: Priority.MEDIUM,
+    status: TaskStatus.DONE,
+    dueInDays: -12,
+    completedDaysAgo: 13,
+  },
+  {
+    title: 'Agree on the sitemap',
+    description: 'Pages, URLs and redirects from the old site',
+    assignee: 'Omar',
+    priority: Priority.HIGH,
+    status: TaskStatus.DONE,
+    dueInDays: -9,
+    completedDaysAgo: 10,
+  },
+  {
+    title: 'Book the photo shoot',
+    description: 'Team photos for the about page',
+    assignee: 'Karim',
+    priority: Priority.LOW,
+    status: TaskStatus.DONE,
+    dueInDays: -2,
+    completedDaysAgo: 3,
   },
   {
     title: 'Review the colour palette',
@@ -147,14 +176,32 @@ function addProject(projectRepository, savedUsers) {
 }
 
 function addTasks(taskRepository, { projectId, savedUsers }) {
-  return TASKS.map(({ assignee, dueInDays, ...fields }) =>
+  // Only the task columns go to the repository; completedDaysAgo is used by addCompletions
+  return TASKS.map(({ assignee, dueInDays, title, description, priority, status }) =>
     taskRepository.create({
-      ...fields,
+      title,
+      description,
+      priority,
+      status,
       projectId,
       assigneeId: savedUsers[assignee].id,
       dueDate: dateInDays(dueInDays),
     }),
   );
+}
+
+// FR7: a DONE task needs its DONE history entry, or the report's completion trend is empty
+function addCompletions(historyRepository, { tasks, savedUsers }) {
+  TASKS.forEach(({ assignee, completedDaysAgo }, index) => {
+    if (completedDaysAgo === undefined) return;
+    historyRepository.create({
+      taskId: tasks[index].id,
+      changedBy: savedUsers[assignee].id,
+      oldStatus: TaskStatus.IN_PROGRESS,
+      newStatus: TaskStatus.DONE,
+      changedAt: `${dateInDays(-completedDaysAgo)}T15:00:00.000Z`,
+    });
+  });
 }
 
 /**
@@ -170,10 +217,29 @@ function seed(databasePath = config.databasePath) {
     const users = addUsers(new UserRepository(db), new PasswordHasher());
     const project = addProject(new ProjectRepository(db), users);
     const tasks = addTasks(new TaskRepository(db), { projectId: project.id, savedUsers: users });
+    addCompletions(new TaskStatusHistoryRepository(db), { tasks, savedUsers: users });
     return { users, project, tasks };
   } finally {
     db.close();
   }
+}
+
+/**
+ * @param {string} [databasePath]
+ * @returns {boolean} true if the demo data was loaded
+ * effects: seeds only a database with no users (the first start of a deployed server)
+ * modifies: every table, only when it was empty
+ */
+function seedIfEmpty(databasePath = config.databasePath) {
+  const db = createConnection(databasePath);
+  let isEmpty;
+  try {
+    isEmpty = new UserRepository(db).findAll().length === 0;
+  } finally {
+    db.close();
+  }
+  if (isEmpty) seed(databasePath);
+  return isEmpty;
 }
 
 function printLogins({ project, tasks }) {
@@ -187,4 +253,4 @@ function printLogins({ project, tasks }) {
 // Runs only from the command line (npm run seed), not when another file requires it
 if (require.main === module) printLogins(seed());
 
-module.exports = { seed, PASSWORD };
+module.exports = { seed, seedIfEmpty, PASSWORD };
