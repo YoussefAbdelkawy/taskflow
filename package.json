@@ -24,7 +24,7 @@
     "check": "npm run lint && npm run format:check && npm run test:coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:api": "node scripts/api-tests.js",
+    "test:api": "node --disable-warning=ExperimentalWarning scripts/api-tests.js",
     "trace": "node scripts/traceability.js"
   },
   "dependencies": {
