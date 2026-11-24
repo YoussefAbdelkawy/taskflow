@@ -44,6 +44,8 @@ CREATE TABLE IF NOT EXISTS tasks (
 
 -- FR5 NFR Performance: "my tasks" filtered by priority/status and sorted by due date
 CREATE INDEX IF NOT EXISTS idx_tasks_filter ON tasks(assignee_id, priority, status, due_date);
+-- FR7 NFR Performance: every report query reads one project's tasks inside a due-date range
+CREATE INDEX IF NOT EXISTS idx_tasks_project_due ON tasks(project_id, due_date);
 
 CREATE TABLE IF NOT EXISTS task_status_history (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,6 +55,9 @@ CREATE TABLE IF NOT EXISTS task_status_history (
   new_status TEXT NOT NULL,
   changed_at TEXT NOT NULL
 );
+
+-- FR7: the completion trend reads DONE changes per task
+CREATE INDEX IF NOT EXISTS idx_history_task ON task_status_history(task_id, new_status);
 
 CREATE TABLE IF NOT EXISTS comments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
