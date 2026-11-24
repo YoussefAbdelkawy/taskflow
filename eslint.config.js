@@ -34,7 +34,16 @@ const layerRule = (forbidden, message) => ({
 });
 
 module.exports = [
-  { ignores: ['node_modules/', 'coverage/', 'data/'] },
+  {
+    ignores: [
+      'node_modules/',
+      'coverage/',
+      'data/',
+      'public/vendor/',
+      'playwright-report/',
+      'test-results/',
+    ],
+  },
   js.configs.recommended,
   { plugins: { layers: layersPlugin } },
 
