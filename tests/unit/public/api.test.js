@@ -167,7 +167,8 @@ describe('public/js/api.js', () => {
       const error = await api.patch('/tasks/1/status', {}).catch((thrown) => thrown);
 
       expect(error).toBeInstanceOf(api.ApiError);
-      expect(error).toBeInstanceOf(Error);
+      // the sandbox has its own Error class, so check the parent by name
+      expect(Object.getPrototypeOf(api.ApiError.prototype).constructor.name).toBe('Error');
       expect(error).toMatchObject({ status: 409, message: 'Task is blocked', details: body });
     });
 
