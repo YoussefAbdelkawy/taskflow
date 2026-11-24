@@ -74,7 +74,7 @@ describe('recurrence API', () => {
     expect(set.status).toBe(200);
     expect(set.body).toEqual({ taskId: report.id, frequency: 'WEEKLY', isActive: true });
     expect(read.status).toBe(200);
-    expect(read.body).toEqual(set.body);
+    expect(read.body).toEqual({ ...set.body, nextDueDate: '2026-11-09' });
     expect(off.status).toBe(200);
     expect(off.body).toEqual({ taskId: report.id, frequency: 'WEEKLY', isActive: false });
   });
