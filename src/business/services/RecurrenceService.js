@@ -76,9 +76,11 @@ class RecurrenceService extends TaskObserver {
 
   /**
    * @param {{ taskId: number, user: { id: number } }} input
-   * @returns {{ taskId: number, frequency: string | null, isActive: boolean }}
+   * @returns {{ taskId: number, frequency: string | null, isActive: boolean,
+   *            nextDueDate: string | null }}
    * requires: user is the logged-in user
-   * effects: returns the task's recurrence; throws NotFoundError (no task) or
+   * effects: returns the task's recurrence and, while it is on, the due date of the next copy;
+   *          throws NotFoundError (no task) or
    *          ForbiddenError (user is not in the task's project)
    * modifies: nothing
    */
@@ -89,7 +91,11 @@ class RecurrenceService extends TaskObserver {
     const rule = task.recurrenceId
       ? this.recurrenceRuleRepository.findById(task.recurrenceId)
       : null;
-    return stateOf(taskId, rule);
+    // The date the next copy will be due, from the same strategy that will create it
+    const nextDueDate = rule?.isActive
+      ? strategyFor(rule.frequency).nextDueDate(task.dueDate)
+      : null;
+    return { ...stateOf(taskId, rule), nextDueDate };
   }
 
   /**

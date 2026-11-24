@@ -124,6 +124,12 @@ const schemas = {
       taskId: { type: 'integer' },
       frequency: { type: 'string', enum: values(Frequency), nullable: true },
       isActive: { type: 'boolean' },
+      nextDueDate: {
+        type: 'string',
+        format: 'date',
+        nullable: true,
+        description: 'GET only: due date of the next copy while the rule is on',
+      },
     },
   },
   Dependencies: {
