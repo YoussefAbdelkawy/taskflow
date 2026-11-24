@@ -29,7 +29,7 @@
     className: 'recurrence-message text-xs text-destructive',
     attrs: { role: 'status' },
   });
-  section.classList.add('field');
+  section.classList.add('field', 'max-w-xs');
   section.replaceChildren(
     ui.el(
       'label',

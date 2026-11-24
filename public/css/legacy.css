@@ -36,7 +36,7 @@ main.container a:hover {
   text-decoration: underline;
 }
 
-main.container label {
+main.container label:not(.flex) {
   display: block;
   margin: 10px 0 4px;
   font-weight: 500;
