@@ -1,0 +1,153 @@
+/* TaskFlow design system entry. Build: npm run build:css -> public/css/app.css */
+@import 'tailwindcss' source('../../public');
+@import 'basecoat-css';
+
+/* Geist + Geist Mono (OFL-1.1), latin only, self-hosted: npm run build copies the files to public/css/files */
+@font-face {
+  font-family: 'Geist Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url(./files/geist-latin-wght-normal.woff2) format('woff2-variations');
+}
+@font-face {
+  font-family: 'Geist Mono Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url(./files/geist-mono-latin-wght-normal.woff2) format('woff2-variations');
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---- Tokens (see DESIGN.md). Light is default; .dark on <html> flips them. ---- */
+:root {
+  --radius: 0.5rem;
+  --background: oklch(0.992 0.002 264);
+  --foreground: oklch(0.21 0.012 264);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.52 0.19 268); /* indigo accent, the only chroma */
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.965 0.004 264);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.965 0.004 264);
+  --muted-foreground: oklch(0.52 0.014 264);
+  --accent: oklch(0.955 0.012 268);
+  --accent-foreground: oklch(0.3 0.08 268);
+  --destructive: oklch(0.58 0.21 25);
+  --border: oklch(0.915 0.005 264);
+  --input: oklch(0.9 0.006 264);
+  --ring: oklch(0.52 0.19 268 / 0.45);
+  --sidebar: oklch(0.975 0.003 264);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-accent: oklch(0.94 0.006 264);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-ring: var(--ring);
+  /* status + priority (semantic only, never decorative) */
+  --status-todo: oklch(0.6 0.01 264);
+  --status-progress: oklch(0.72 0.15 75);
+  --status-done: oklch(0.6 0.15 155);
+  --status-blocked: oklch(0.6 0.2 25);
+  /* Reports charts (Basecoat chart reads --chart-1..5): the accent, then the status colours */
+  --chart-1: var(--primary);
+  --chart-2: var(--status-done);
+  --chart-3: var(--status-progress);
+  --chart-4: var(--status-todo);
+  --chart-5: var(--status-blocked);
+}
+.dark {
+  --background: oklch(0.16 0.006 264);
+  --foreground: oklch(0.95 0.004 264);
+  --card: oklch(0.19 0.007 264);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.2 0.008 264);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.66 0.16 270);
+  --primary-foreground: oklch(0.16 0.01 264);
+  --secondary: oklch(0.23 0.008 264);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.23 0.008 264);
+  --muted-foreground: oklch(0.68 0.012 264);
+  --accent: oklch(0.25 0.03 270);
+  --accent-foreground: oklch(0.92 0.03 270);
+  --border: oklch(0.27 0.008 264);
+  --input: oklch(0.3 0.008 264);
+  --sidebar: oklch(0.145 0.006 264);
+  --sidebar-accent: oklch(0.22 0.008 264);
+  --sidebar-border: oklch(0.24 0.008 264);
+}
+
+@theme inline {
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
+  --color-status-todo: var(--status-todo);
+  --color-status-progress: var(--status-progress);
+  --color-status-done: var(--status-done);
+  --color-status-blocked: var(--status-blocked);
+}
+
+@layer base {
+  html {
+    font-feature-settings: 'ss01', 'cv11';
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    @apply bg-background text-foreground font-sans text-sm;
+  }
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.015em;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* ---- App-specific components (keep small; prefer Basecoat classes) ---- */
+@layer components {
+  svg.lucide {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .status-dot {
+    @apply inline-block size-2 rounded-full;
+  }
+  .kbd {
+    @apply font-mono text-[11px] px-1.5 py-0.5 rounded border border-border bg-muted text-muted-foreground;
+  }
+  .stat-value {
+    @apply text-2xl font-semibold tabular-nums tracking-tight;
+  }
+  .eyebrow {
+    @apply text-xs font-medium text-muted-foreground uppercase tracking-wide;
+  }
+  .avatar {
+    @apply grid size-6 shrink-0 place-items-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground;
+  }
+  .row-link {
+    @apply flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 focus-visible:bg-muted/50;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
