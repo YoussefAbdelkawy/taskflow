@@ -6,3 +6,4 @@ public/vendor/
 public/css/app.css
 playwright-report/
 test-results/
+docs/TRACEABILITY.md
