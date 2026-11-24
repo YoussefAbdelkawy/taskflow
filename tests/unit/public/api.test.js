@@ -34,14 +34,22 @@ const jsonResponse = (status, body) => ({
   json: async () => body,
 });
 
-function loadApi({ storage = fakeStorage(), pathname = '/index.html', response }) {
+function loadApi({
+  storage = fakeStorage(),
+  pathname = '/index.html',
+  search = '',
+  response,
+  fetchError,
+}) {
   const calls = [];
-  const location = { pathname, href: pathname };
+  const location = { pathname, search, href: pathname };
   const sandbox = {
     localStorage: storage,
     location,
+    URLSearchParams,
     fetch: async (url, options) => {
       calls.push({ url, options });
+      if (fetchError) throw fetchError;
       return response;
     },
   };
@@ -99,16 +107,18 @@ describe('public/js/api.js', () => {
     expect(storage.getItem(TOKEN_KEY)).toBeNull();
   });
 
-  it('on 401 clears the token, goes to login.html and throws', async () => {
+  it('on 401 clears the token, goes to login.html?next=<this page> and throws', async () => {
     const { api, location, storage } = loadApi({
       storage: fakeStorage({ [TOKEN_KEY]: 'old' }),
+      pathname: '/task.html',
+      search: '?id=3',
       response: jsonResponse(401, { error: 'Please log in' }),
     });
 
     await expect(api.get('/auth/me')).rejects.toThrow('Please log in');
 
     expect(storage.getItem(TOKEN_KEY)).toBeNull();
-    expect(location.href).toBe('login.html');
+    expect(location.href).toBe('login.html?next=task.html%3Fid%3D3');
   });
 
   it('on 401 while already on login.html stays there and shows the server message', async () => {
@@ -147,5 +157,83 @@ describe('public/js/api.js', () => {
     expect(() => api.setToken('abc')).not.toThrow();
     expect(() => api.clearToken()).not.toThrow();
     await expect(api.get('/health')).resolves.toEqual({});
+  });
+
+  describe('error contract (M3)', () => {
+    it('a non-2xx answer throws an ApiError with status, message and the whole body as details', async () => {
+      const body = { error: 'Task is blocked', blockedBy: [4] };
+      const { api } = loadApi({ response: jsonResponse(409, body) });
+
+      const error = await api.patch('/tasks/1/status', {}).catch((thrown) => thrown);
+
+      expect(error).toBeInstanceOf(api.ApiError);
+      expect(error).toBeInstanceOf(Error);
+      expect(error).toMatchObject({ status: 409, message: 'Task is blocked', details: body });
+    });
+
+    it('an answer without a JSON body still gives a readable message', async () => {
+      const response = { ok: false, status: 500, json: async () => JSON.parse('<html>') };
+      const { api } = loadApi({ response });
+
+      await expect(api.get('/health')).rejects.toMatchObject({
+        status: 500,
+        message: 'Request failed (500)',
+      });
+    });
+
+    it('a network failure throws ApiError(0, "Cannot reach the server")', async () => {
+      const { api } = loadApi({ fetchError: new TypeError('Failed to fetch') });
+
+      const error = await api.get('/health').catch((thrown) => thrown);
+
+      expect(error).toBeInstanceOf(api.ApiError);
+      expect(error).toMatchObject({ status: 0, message: 'Cannot reach the server' });
+    });
+
+    it('on login.html, 401 does not add a next parameter to itself', async () => {
+      const { api, location } = loadApi({
+        pathname: '/login.html',
+        search: '?next=index.html',
+        response: jsonResponse(401, { error: 'Wrong email or password' }),
+      });
+
+      await expect(api.post('/auth/login', {})).rejects.toThrow('Wrong email or password');
+      expect(location.href).toBe('/login.html');
+    });
+  });
+
+  describe('download (US7-2)', () => {
+    const fileResponse = (disposition) => ({
+      ok: true,
+      status: 200,
+      headers: { get: (name) => (name === 'Content-Disposition' ? disposition : null) },
+      blob: async () => 'file-bytes',
+      json: async () => ({}),
+    });
+
+    it.each([
+      ['attachment; filename="taskflow-website-2026-11-24.csv"', 'taskflow-website-2026-11-24.csv'],
+      ['attachment; filename=taskflow-a-2026-11-24.csv', 'taskflow-a-2026-11-24.csv'],
+      [null, 'download'],
+    ])('US7-2 reads the file name from %p', async (disposition, fileName) => {
+      const { api, calls } = loadApi({
+        storage: fakeStorage({ [TOKEN_KEY]: 'abc' }),
+        response: fileResponse(disposition),
+      });
+
+      await expect(api.download('/projects/1/report.csv')).resolves.toEqual({
+        blob: 'file-bytes',
+        fileName,
+      });
+      expect(calls[0].options.headers.Authorization).toBe('Bearer abc');
+    });
+
+    it('US7-2 a refused download throws the server error like every other call', async () => {
+      const { api } = loadApi({
+        response: jsonResponse(403, { error: 'Only the project manager' }),
+      });
+
+      await expect(api.download('/projects/1/report.csv')).rejects.toMatchObject({ status: 403 });
+    });
   });
 });
