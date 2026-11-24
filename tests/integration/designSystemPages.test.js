@@ -80,8 +80,10 @@ describe('design system pages', () => {
     ]) {
       expect(text).toContain(`id="${id}"`);
     }
+    // Basecoat's chart theme attaches to window.basecoat, so it loads after basecoat.min.js
     expect(
       loadsInOrder(text, [
+        'vendor/basecoat.min.js',
         'vendor/chart.umd.min.js',
         'vendor/basecoat-chart.min.js',
         'js/api.js',
