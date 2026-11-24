@@ -39,6 +39,14 @@ const notFound = error('No such resource');
 const notMemberOrNoProject = error('Not a member (or manager) of this project, or no such project');
 const invalid = error('Invalid input');
 
+const dateQuery = (name) => ({
+  name,
+  in: 'query',
+  required: false,
+  description: 'YYYY-MM-DD; default: the last 30 days up to today',
+  schema: { type: 'string', format: 'date' },
+});
+
 const values = (enumObject) => Object.values(enumObject);
 
 const schemas = {
@@ -161,6 +169,49 @@ const schemas = {
       message: { type: 'string' },
       isRead: { type: 'boolean' },
       createdAt: { type: 'string', format: 'date-time' },
+    },
+  },
+  Report: {
+    type: 'object',
+    description: 'Built by ReportBuilder (Builder pattern); frozen',
+    properties: {
+      project: { type: 'object', example: { id: 1, name: 'Website Relaunch' } },
+      range: { type: 'object', example: { from: '2026-10-26', to: '2026-11-24' } },
+      isEmpty: { type: 'boolean', description: 'true when no task is due inside the range' },
+      summary: {
+        type: 'object',
+        example: { total: 8, done: 1, open: 7, overdue: 1, completionRate: 13 },
+      },
+      statusBreakdown: { type: 'array', example: [{ status: 'TO_DO', count: 5 }] },
+      completionTrend: { type: 'array', example: [{ week: '2026-W47', count: 2 }] },
+      workload: { type: 'array', example: [{ assigneeId: 2, name: 'Karim', open: 2, done: 1 }] },
+      overdue: {
+        type: 'array',
+        example: [
+          {
+            id: 3,
+            title: 'Fix the login bug',
+            assigneeName: 'Omar',
+            priority: 'HIGH',
+            status: 'TO_DO',
+            dueDate: '2026-11-22',
+            daysLate: 2,
+          },
+        ],
+      },
+    },
+  },
+  Dashboard: {
+    type: 'object',
+    properties: {
+      stats: { type: 'object', example: { open: 3, dueThisWeek: 2, overdue: 0, done: 1 } },
+      dueSoon: { type: 'array', description: 'At most 6 open tasks, earliest due first' },
+      projects: {
+        type: 'array',
+        example: [
+          { id: 1, name: 'Website Relaunch', total: 8, done: 1, progress: 13, isManager: true },
+        ],
+      },
     },
   },
 };
@@ -526,6 +577,41 @@ const paths = {
         403: notAllowed,
         404: notFound,
       },
+    },
+  },
+  '/api/projects/{id}/report': {
+    get: {
+      tags: ['Reports (FR7)'],
+      summary: 'Project report: status breakdown, completion trend, workload, overdue',
+      parameters: [idParam('id', 'Project id'), dateQuery('from'), dateQuery('to')],
+      responses: {
+        200: reply('The report', ref('Report')),
+        400: error('Malformed or reversed dates, or a range over 366 days'),
+        401: notLoggedIn,
+        403: error('Not the manager of this project'),
+        404: notFound,
+      },
+    },
+  },
+  '/api/projects/{id}/report.csv': {
+    get: {
+      tags: ['Reports (FR7)'],
+      summary: 'Download the overdue table as CSV (taskflow-<project>-<date>.csv)',
+      parameters: [idParam('id', 'Project id'), dateQuery('from'), dateQuery('to')],
+      responses: {
+        200: { description: 'CSV file', content: { 'text/csv': { schema: { type: 'string' } } } },
+        400: invalid,
+        401: notLoggedIn,
+        403: error('Not the manager of this project'),
+        404: notFound,
+      },
+    },
+  },
+  '/api/dashboard': {
+    get: {
+      tags: ['Reports (FR7)'],
+      summary: 'My dashboard: counts, next tasks and project progress',
+      responses: { 200: reply('Dashboard', ref('Dashboard')), 401: notLoggedIn },
     },
   },
 };
