@@ -153,14 +153,22 @@ describe('RecurrenceService', () => {
   });
 
   describe('getRecurrence', () => {
-    it('returns the rule for any project member', () => {
+    it('returns the rule and the next due date (US2-1, shown under the Repeats select) for any project member', () => {
       const task = makeRecurring('MONTHLY');
 
       expect(service.getRecurrence({ taskId: task.id, user: member })).toEqual({
         taskId: task.id,
         frequency: 'MONTHLY',
         isActive: true,
+        nextDueDate: '2026-12-02',
       });
+    });
+
+    it('US2-3 a rule that is turned off has no next due date', () => {
+      const task = makeRecurring('WEEKLY');
+      service.turnOff({ taskId: task.id, user: manager });
+
+      expect(service.getRecurrence({ taskId: task.id, user: member }).nextDueDate).toBeNull();
     });
 
     it('returns frequency null and isActive false when there is no rule', () => {
@@ -170,6 +178,7 @@ describe('RecurrenceService', () => {
         taskId: task.id,
         frequency: null,
         isActive: false,
+        nextDueDate: null,
       });
     });
 

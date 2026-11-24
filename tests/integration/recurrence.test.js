@@ -85,7 +85,12 @@ describe('recurrence API', () => {
     const response = await request(app).get(url()).set('Authorization', auth);
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ taskId: report.id, frequency: null, isActive: false });
+    expect(response.body).toEqual({
+      taskId: report.id,
+      frequency: null,
+      isActive: false,
+      nextDueDate: null,
+    });
   });
 
   it('an unknown frequency → 400 and an unknown task → 404', async () => {
