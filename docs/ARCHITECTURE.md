@@ -6,6 +6,9 @@ Use this page when the evaluator asks "show me where your architecture is in the
 
 ```
 Client (browser in public/, Postman, Swagger UI at /api-docs)
+  public/js/layout.js  the app shell (sidebar, topbar, theme) on every page
+  public/js/ui.js      shared UI helpers (toasts, dialogs, loading / empty / error states)
+  public/js/api.js     the only place that calls the backend; throws ApiError {status, message, details}
         │  HTTP + JSON, "Authorization: Bearer <token>"
         ▼
 PRESENTATION   src/presentation/   routes → authenticate middleware → controllers → errorHandler
@@ -42,6 +45,14 @@ for example, a controller `require`s a repository.
 5. Observers react: `RecurrenceService` creates the next copy of a recurring task.
 6. Any thrown `AppError` becomes the right HTTP status in `src/presentation/middleware/errorHandler.js` — controllers have no `try/catch`.
 
+### The frontend (Milestone 3)
+
+The frontend stays plain HTML + JavaScript in `public/` (no framework, no build step needed to run it), styled by one design system described in [DESIGN.md](../DESIGN.md):
+
+- **Shell:** `layout.js` builds the sidebar and topbar on every page from `<header id="app-header">`, so no page copies navigation. Hooks for teammates: `taskflow:open-search` (Ctrl/Cmd K) and `taskflow:open-notifications` events.
+- **Error contract:** every failed call throws `ApiError {status, message, details}`; status 0 means the server is unreachable; a 401 clears the token and opens `login.html?next=<page>`. Pages show `ui.errorState` or `ui.toast` with the server's message.
+- **Styles:** `src/styles/app.css` (Tailwind 4 + Basecoat tokens) is built into `public/css/app.css` by `npm run build`. The built file is committed.
+
 ## 2. Design patterns from the class diagram
 
 | Pattern                      | Where                                                                                                                                                           | Why we used it                                                                                        |
@@ -51,6 +62,8 @@ for example, a controller `require`s a repository.
 | **Dependency injection**     | `src/container.js` (composition root) builds everything and passes it through constructors                                                                      | Loose coupling; tests inject fakes; no `new XRepository()` inside a service                           |
 | **Observer**                 | `src/business/events/EventPublisher.js` (subject), `TaskObserver.js` (interface); `RecurrenceService` and `NotificationService` subscribe in `container.js:112` | `TaskService` announces "task completed / assigned" without knowing who cares (open/closed principle) |
 | **Strategy**                 | `src/business/rules/recurrence/`: `RecurrenceStrategy` → `Daily`, `Weekly`, `MonthlyRecurrence`; picked by `strategyFor.js`                                     | Adding "yearly" = one new class + one table entry; no `if/else` chain in the service                  |
+| **Builder** (FR7)            | `src/business/reports/ReportBuilder.js`, used by `ReportService.getProjectReport`                                                                               | Optional report sections assembled step by step; frozen result. See `docs/DESIGN_PATTERNS.md`         |
+| **Strategy** (FR7 export)    | `src/business/reports/exporters/`: `CsvExporter`, `JsonExporter`, picked by `exporterFor.js`                                                                    | A new export format is one class + one table entry                                                    |
 | **Template / abstract base** | `BaseRepository`, `RecurrenceStrategy`, `TaskObserver` throw "not implemented"                                                                                  | Defines the contract each subclass must fulfil                                                        |
 | **Middleware chain**         | `authenticate.js`, `errorHandler.js`                                                                                                                            | Cross-cutting concerns (auth, errors) in one place, not repeated in each controller                   |
 
@@ -68,16 +81,17 @@ the code for `// Imperative:` and `// Declarative:` to list them all.
 
 ## 4. Non-functional requirements
 
-| NFR             | How it is met                                                                                                                                                     | Proof                                          |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| Security        | Passwords hashed with scrypt + per-user salt, compared in constant time; every route after login needs a token; role checks in services                           | `PasswordHasher.js`, `AuthorizationService.js` |
-| Performance     | Composite index `idx_tasks_filter` on `(assignee_id, priority, status, due_date)`                                                                                 | `tests/integration/filterPerformance.test.js`  |
-| Data integrity  | `CHECK`, `UNIQUE`, foreign keys in `schema.sql`; cycle check + insert run in one transaction; `UNIQUE (recurrence_id, due_date)` stops duplicate recurring copies | `schema.sql`, `DependencyService.js:54`        |
-| Reliability     | Scheduler catches its own errors so the server keeps running; one failing observer does not stop the others                                                       | `Scheduler.js`, `EventPublisher.publish`       |
-| Maintainability | ESLint (code smells + layer rule), Prettier, 330+ automated tests, written test-first                                                                             | `npm run check`                                |
+| NFR               | How it is met                                                                                                                                                     | Proof                                          |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Security          | Passwords hashed with scrypt + per-user salt, compared in constant time; every route after login needs a token; role checks in services                           | `PasswordHasher.js`, `AuthorizationService.js` |
+| Performance       | Composite index `idx_tasks_filter` on `(assignee_id, priority, status, due_date)`                                                                                 | `tests/integration/filterPerformance.test.js`  |
+| Data integrity    | `CHECK`, `UNIQUE`, foreign keys in `schema.sql`; cycle check + insert run in one transaction; `UNIQUE (recurrence_id, due_date)` stops duplicate recurring copies | `schema.sql`, `DependencyService.js:54`        |
+| Reliability       | Scheduler catches its own errors so the server keeps running; one failing observer does not stop the others                                                       | `Scheduler.js`, `EventPublisher.publish`       |
+| Performance (FR7) | Index `idx_tasks_project_due` on `(project_id, due_date)`; a report over 1,000 tasks in under 1 s (NFR7)                                                          | `tests/integration/reports.test.js`            |
+| Maintainability   | ESLint (code smells + layer rule), Prettier, 480+ unit/integration tests, E2E tests, coverage gate, written test-first                                            | `npm run check`, `docs/TESTING.md`             |
 
 ## 5. API surface
 
-26 endpoints, all under `/api`. See them live at <http://localhost:3000/api-docs> (Swagger) or run
+29 endpoints, all under `/api`. Milestone 3 added `GET /api/projects/:id/report`, `GET /api/projects/:id/report.csv` and `GET /api/dashboard` (FR7). See them live at <http://localhost:3000/api-docs> (Swagger) or run
 `docs/postman/TaskFlow.postman_collection.json`. `tests/integration/apiDocs.test.js` fails if a
 route is added without being documented.

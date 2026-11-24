@@ -1,0 +1,18 @@
+# Deployment on Render (render.com → New → Blueprint → pick this repository).
+# The free plan has no persistent disk: the database lives in /tmp and SEED_ON_EMPTY loads the
+# demo data whenever the server starts with an empty database.
+services:
+  - type: web
+    name: taskflow
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.13.0
+      - key: DB_PATH
+        value: /tmp/taskflow.db
+      - key: SEED_ON_EMPTY
+        value: 'true'
