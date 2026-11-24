@@ -126,6 +126,22 @@ const TASKS = Object.freeze([
     dueInDays: 7,
   },
   {
+    title: 'Approve the launch budget',
+    description: 'Hosting, photos and the launch campaign',
+    assignee: 'Mona',
+    priority: Priority.HIGH,
+    status: TaskStatus.IN_PROGRESS,
+    dueInDays: 2,
+  },
+  {
+    title: 'Review the sprint plan with the team',
+    description: 'Check scope and owners for the next two weeks',
+    assignee: 'Mona',
+    priority: Priority.MEDIUM,
+    status: TaskStatus.TO_DO,
+    dueInDays: 5,
+  },
+  {
     title: 'Plan the user interviews',
     description: 'Five customers, 30 minutes each',
     assignee: 'Salma',

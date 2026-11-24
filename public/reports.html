@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Reports – TaskFlow</title>
+    <script src="js/theme.js"></script>
+    <link rel="stylesheet" href="css/app.css" />
+    <script src="vendor/basecoat.min.js" defer></script>
+    <!-- charts: Chart.js, then Basecoat's theme for it (needs basecoat.min.js first) -->
+    <script src="vendor/chart.umd.min.js" defer></script>
+    <script src="vendor/basecoat-chart.min.js" defer></script>
+  </head>
+  <body>
+    <header id="app-header"></header>
+    <!-- FR7 US7-1, US7-2: project report for managers. Filled by js/reports.js -->
+    <main class="mx-auto max-w-6xl px-4 py-8 md:px-6" data-breadcrumb="Reports">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p class="eyebrow">Project managers</p>
+          <h1 class="mt-1 text-2xl font-semibold">Reports</h1>
+        </div>
+        <button type="button" class="btn" data-size="sm" id="export-csv" disabled>
+          <svg class="lucide" aria-hidden="true"><use href="vendor/lucide.svg#download" /></svg>
+          Export CSV
+        </button>
+      </div>
+
+      <form id="report-form" class="mt-6 flex flex-wrap items-end gap-3">
+        <div class="field w-64">
+          <label for="report-project" class="text-xs text-muted-foreground">Project</label>
+          <select id="report-project" name="project" class="select input"></select>
+        </div>
+        <div class="field w-40">
+          <label for="report-from" class="text-xs text-muted-foreground">From</label>
+          <input id="report-from" name="from" type="date" class="input" required />
+        </div>
+        <div class="field w-40">
+          <label for="report-to" class="text-xs text-muted-foreground">To</label>
+          <input id="report-to" name="to" type="date" class="input" required />
+        </div>
+        <button type="submit" class="btn" data-variant="outline" data-size="sm">Update</button>
+        <p id="report-message" class="w-full text-sm text-destructive" role="alert"></p>
+      </form>
+
+      <div id="report-body" class="mt-6" aria-live="polite">
+        <div
+          id="report-stats"
+          class="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border lg:grid-cols-4"
+        >
+          <div class="bg-card p-4">
+            <p class="text-muted-foreground">Tasks in range</p>
+            <p class="stat-value mt-1" data-summary="total">–</p>
+          </div>
+          <div class="bg-card p-4">
+            <p class="text-muted-foreground">Completion</p>
+            <p class="stat-value mt-1" data-summary="completionRate">–</p>
+          </div>
+          <div class="bg-card p-4">
+            <p class="text-muted-foreground">Open</p>
+            <p class="stat-value mt-1" data-summary="open">–</p>
+          </div>
+          <div class="bg-card p-4">
+            <p class="text-muted-foreground">Overdue</p>
+            <p class="stat-value mt-1" data-summary="overdue">–</p>
+          </div>
+        </div>
+
+        <div class="mt-8 grid gap-6 lg:grid-cols-3">
+          <section class="min-w-0" aria-labelledby="status-title">
+            <h2 class="font-medium" id="status-title">Status breakdown</h2>
+            <div class="mt-3 rounded-lg border bg-card p-4">
+              <div class="chart aspect-auto h-48">
+                <canvas id="chart-status" aria-label="Tasks by status"></canvas>
+              </div>
+            </div>
+          </section>
+          <section class="min-w-0 lg:col-span-2" aria-labelledby="trend-title">
+            <h2 class="font-medium" id="trend-title">Completed per week</h2>
+            <div class="mt-3 rounded-lg border bg-card p-4">
+              <div class="chart aspect-auto h-48">
+                <canvas id="chart-trend" aria-label="Tasks completed per week"></canvas>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="mt-8 grid gap-6 lg:grid-cols-3">
+          <section class="min-w-0" aria-labelledby="workload-title">
+            <h2 class="font-medium" id="workload-title">Workload per member</h2>
+            <div class="mt-3 rounded-lg border bg-card p-4">
+              <div class="chart aspect-auto h-56">
+                <canvas id="chart-workload" aria-label="Open and done tasks per member"></canvas>
+              </div>
+            </div>
+          </section>
+          <section class="min-w-0 lg:col-span-2" aria-labelledby="overdue-title">
+            <h2 class="font-medium" id="overdue-title">Overdue tasks</h2>
+            <div class="table-container mt-3 rounded-lg border bg-card">
+              <table class="table" id="overdue-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Assignee</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Due date</th>
+                    <th class="text-right">Days late</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/reports.js"></script>
+  </body>
+</html>

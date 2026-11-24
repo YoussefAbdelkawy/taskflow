@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Style guide – TaskFlow</title>
+    <script src="js/theme.js"></script>
+    <link rel="stylesheet" href="css/app.css" />
+    <script src="vendor/basecoat.min.js" defer></script>
+  </head>
+  <!--
+    The living style guide (DESIGN.md). Part 1 is the approved dashboard mock-up with sample
+    data; part 2 shows every shared component with the exact markup to copy.
+    This page is static on purpose: it needs no login and no server data.
+  -->
+  <body>
+    <aside id="sidebar" class="sidebar" data-side="left" aria-hidden="false">
+      <nav aria-label="Main">
+        <header>
+          <div class="flex items-center gap-2 px-2 py-1.5">
+            <span
+              class="grid size-7 place-items-center rounded-md bg-foreground text-xs font-bold text-background"
+              >TF</span
+            >
+            <span class="font-semibold tracking-tight">TaskFlow</span>
+          </div>
+        </header>
+        <section>
+          <div role="group">
+            <ul>
+              <li>
+                <a href="#mockup" aria-current="page"
+                  ><svg class="lucide" aria-hidden="true">
+                    <use href="vendor/lucide.svg#layout-dashboard" /></svg
+                  ><span>Dashboard mock-up</span></a
+                >
+              </li>
+              <li>
+                <a href="#components"
+                  ><svg class="lucide" aria-hidden="true">
+                    <use href="vendor/lucide.svg#component" /></svg
+                  ><span>Components</span></a
+                >
+              </li>
+            </ul>
+          </div>
+          <div role="group" aria-labelledby="g-proj">
+            <h3 id="g-proj">Projects</h3>
+            <ul>
+              <li>
+                <a href="#"
+                  ><span class="status-dot bg-primary"></span><span>Website relaunch</span></a
+                >
+              </li>
+              <li>
+                <a href="#"
+                  ><span class="status-dot bg-status-done"></span><span>Q4 onboarding</span></a
+                >
+              </li>
+            </ul>
+          </div>
+        </section>
+        <footer class="p-2">
+          <button
+            type="button"
+            class="btn w-full justify-start"
+            data-variant="ghost"
+            id="toggle-theme"
+          >
+            <svg class="lucide" aria-hidden="true"><use href="vendor/lucide.svg#sun-moon" /></svg>
+            Switch light / dark
+          </button>
+        </footer>
+      </nav>
+    </aside>
+    <main class="min-h-screen">
+      <div
+        class="sticky top-0 z-10 flex h-12 items-center gap-3 border-b bg-background/80 px-6 backdrop-blur"
+      >
+        <nav class="text-sm text-muted-foreground" aria-label="Breadcrumb">
+          Workspace <span class="mx-1">/</span><span class="text-foreground">Style guide</span>
+        </nav>
+        <div class="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            class="btn w-56 justify-between font-normal text-muted-foreground"
+            data-variant="outline"
+            data-size="sm"
+          >
+            <span class="flex items-center gap-2"
+              ><svg class="lucide" aria-hidden="true"><use href="vendor/lucide.svg#search" /></svg
+              >Search</span
+            ><span class="kbd">Ctrl K</span>
+          </button>
+          <button
+            type="button"
+            class="btn relative"
+            data-variant="ghost"
+            data-size="icon-sm"
+            aria-label="Notifications"
+          >
+            <svg class="lucide" aria-hidden="true"><use href="vendor/lucide.svg#bell" /></svg
+            ><span class="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-primary"></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="mx-auto max-w-6xl px-6 py-8">
+        <!-- ============================== Part 1: the approved mock-up (sample data) -->
+        <section id="mockup">
+          <div class="flex items-end justify-between">
+            <div>
+              <p class="eyebrow">Sample data · Tuesday, 24 November</p>
+              <h1 class="mt-1 text-2xl font-semibold">Good evening, Mona</h1>
+            </div>
+            <button type="button" class="btn" data-size="sm">
+              <svg class="lucide" aria-hidden="true"><use href="vendor/lucide.svg#plus" /></svg>New
+              task
+            </button>
+          </div>
+          <div
+            class="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border lg:grid-cols-4"
+          >
+            <div class="bg-card p-4">
+              <p class="text-muted-foreground">Open tasks</p>
+              <p class="stat-value mt-1">24</p>
+              <p class="mt-1 text-xs text-muted-foreground">assigned to you</p>
+            </div>
+            <div class="bg-card p-4">
+              <p class="text-muted-foreground">Due this week</p>
+              <p class="stat-value mt-1">9</p>
+              <p class="mt-1 text-xs text-muted-foreground">2 today</p>
+            </div>
+            <div class="bg-card p-4">
+              <p class="text-muted-foreground">Overdue</p>
+              <p class="stat-value mt-1 text-status-blocked">3</p>
+              <p class="mt-1 text-xs text-muted-foreground">oldest 4 days</p>
+            </div>
+            <div class="bg-card p-4">
+              <p class="text-muted-foreground">Done</p>
+              <p class="stat-value mt-1">61</p>
+              <p class="mt-1 text-xs text-muted-foreground">tasks you completed</p>
+            </div>
+          </div>
+          <div class="mt-8 grid gap-6 lg:grid-cols-3">
+            <section class="lg:col-span-2">
+              <div class="flex items-center justify-between">
+                <h2 class="font-medium">Due soon</h2>
+                <a class="text-sm text-muted-foreground hover:text-foreground" href="#">View all</a>
+              </div>
+              <div class="mt-3 divide-y rounded-lg border bg-card">
+                <a class="row-link" href="#"
+                  ><span class="status-dot bg-status-progress"></span
+                  ><span class="w-14 font-mono text-xs text-muted-foreground">TF-112</span
+                  ><span class="flex-1 truncate">Migrate billing webhooks to the new queue</span
+                  ><span class="badge" data-variant="outline">High</span
+                  ><span class="w-16 text-right text-xs text-muted-foreground">Today</span
+                  ><span class="avatar">KS</span></a
+                >
+                <a class="row-link" href="#"
+                  ><span class="status-dot bg-status-todo"></span
+                  ><span class="w-14 font-mono text-xs text-muted-foreground">TF-108</span
+                  ><span class="flex-1 truncate">Write onboarding checklist for new hires</span
+                  ><span class="badge" data-variant="secondary">Medium</span
+                  ><span class="w-16 text-right text-xs text-muted-foreground">Tomorrow</span
+                  ><span class="avatar">MA</span></a
+                >
+                <a class="row-link" href="#"
+                  ><span class="status-dot bg-status-blocked"></span
+                  ><span class="w-14 font-mono text-xs text-muted-foreground">TF-097</span
+                  ><span class="flex-1 truncate"
+                    >QA sign-off for release 2.4
+                    <span class="ml-1 text-xs text-status-blocked">Blocked by TF-112</span></span
+                  ><span class="badge" data-variant="outline">High</span
+                  ><span class="w-16 text-right text-xs text-status-blocked">2d late</span
+                  ><span class="avatar">KS</span></a
+                >
+              </div>
+            </section>
+            <section>
+              <h2 class="font-medium">Project progress</h2>
+              <div class="mt-3 space-y-4 rounded-lg border bg-card p-4">
+                <div>
+                  <div class="flex justify-between text-sm">
+                    <span>Website relaunch</span
+                    ><span class="tabular-nums text-muted-foreground">68%</span>
+                  </div>
+                  <div class="mt-2 h-1.5 rounded-full bg-muted">
+                    <div class="h-full w-[68%] rounded-full bg-primary"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex justify-between text-sm">
+                    <span>Q4 onboarding</span
+                    ><span class="tabular-nums text-muted-foreground">92%</span>
+                  </div>
+                  <div class="mt-2 h-1.5 rounded-full bg-muted">
+                    <div class="h-full w-[92%] rounded-full bg-primary"></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <!-- ============================== Part 2: components -->
+        <div id="components" class="mt-16 border-t pt-8">
+          <p class="eyebrow">Components</p>
+          <h1 class="mt-1 text-2xl font-semibold">Copy these, do not invent new ones</h1>
+          <p class="mt-2 max-w-2xl text-muted-foreground">
+            Basecoat 1.3: one class plus data attributes. In the app chrome, buttons use
+            <code class="font-mono text-xs">data-size="sm"</code>. JavaScript helpers for each piece
+            live in <code class="font-mono text-xs">js/ui.js</code>.
+          </p>
+
+          <div class="mt-8 grid gap-8 lg:grid-cols-2">
+            <section>
+              <h2 class="font-medium">Buttons</h2>
+              <div class="mt-3 flex flex-wrap items-center gap-2 rounded-lg border bg-card p-4">
+                <button type="button" class="btn" data-size="sm">Primary</button>
+                <button type="button" class="btn" data-variant="secondary" data-size="sm">
+                  Secondary
+                </button>
+                <button type="button" class="btn" data-variant="outline" data-size="sm">
+                  Outline
+                </button>
+                <button type="button" class="btn" data-variant="ghost" data-size="sm">Ghost</button>
+                <button type="button" class="btn" data-variant="destructive" data-size="sm">
+                  Delete task
+                </button>
+                <a class="btn" data-variant="link" data-size="sm" href="#">Link</a>
+                <button
+                  type="button"
+                  class="btn"
+                  data-variant="outline"
+                  data-size="icon-sm"
+                  aria-label="Add"
+                >
+                  <svg class="lucide" aria-hidden="true"><use href="vendor/lucide.svg#plus" /></svg>
+                </button>
+                <button type="button" class="btn" data-size="sm" disabled>Disabled</button>
+              </div>
+            </section>
+
+            <section>
+              <h2 class="font-medium">Badges</h2>
+              <div class="mt-3 flex flex-wrap items-center gap-2 rounded-lg border bg-card p-4">
+                <span class="badge" data-variant="outline">High</span>
+                <span class="badge" data-variant="secondary">Medium</span>
+                <span class="badge" data-variant="secondary">Low</span>
+                <span class="badge">Primary</span>
+                <span class="badge" data-variant="destructive">Blocked</span>
+                <span class="kbd">Ctrl K</span>
+                <span class="avatar">MA</span>
+              </div>
+            </section>
+
+            <section>
+              <h2 class="font-medium">Status</h2>
+              <div class="mt-3 flex flex-wrap items-center gap-4 rounded-lg border bg-card p-4">
+                <span class="inline-flex items-center gap-2"
+                  ><span class="status-dot bg-status-todo"></span>To do</span
+                >
+                <span class="inline-flex items-center gap-2"
+                  ><span class="status-dot bg-status-progress"></span>In progress</span
+                >
+                <span class="inline-flex items-center gap-2"
+                  ><span class="status-dot bg-status-done"></span>Done</span
+                >
+                <span class="inline-flex items-center gap-2"
+                  ><span class="status-dot bg-status-blocked"></span>Blocked</span
+                >
+              </div>
+            </section>
+
+            <section>
+              <h2 class="font-medium">Progress</h2>
+              <div class="mt-3 space-y-3 rounded-lg border bg-card p-4">
+                <div
+                  class="progress"
+                  role="progressbar"
+                  aria-valuenow="68"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  aria-label="Website relaunch"
+                >
+                  <span style="width: 68%"></span>
+                </div>
+                <div class="h-1.5 rounded-full bg-muted">
+                  <div class="h-full w-[40%] rounded-full bg-primary"></div>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <h2 class="font-medium">Form fields</h2>
+              <form class="form mt-3 grid gap-4 rounded-lg border bg-card p-4">
+                <div class="field">
+                  <label for="sg-title">Title</label>
+                  <input id="sg-title" class="input" placeholder="Design the home page" />
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="field">
+                    <label for="sg-priority">Priority</label>
+                    <select id="sg-priority" class="select input">
+                      <option>High</option>
+                      <option selected>Medium</option>
+                      <option>Low</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="sg-due">Due date</label>
+                    <input id="sg-due" type="date" class="input" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="sg-description">Description</label>
+                  <textarea id="sg-description" class="textarea" rows="3"></textarea>
+                </div>
+                <div class="field" data-invalid="true">
+                  <label for="sg-error">Email</label>
+                  <input id="sg-error" class="input" aria-invalid="true" value="mona@" />
+                  <p class="text-xs">This is not an email address</p>
+                </div>
+              </form>
+            </section>
+
+            <section>
+              <h2 class="font-medium">Dialog</h2>
+              <div class="mt-3 rounded-lg border bg-card p-4">
+                <p class="text-muted-foreground">
+                  Forms for create and edit open in a native dialog. For confirmations call
+                  <code class="font-mono text-xs">ui.confirm({ title, body, destructive })</code>.
+                </p>
+                <button
+                  type="button"
+                  class="btn mt-3"
+                  data-variant="outline"
+                  data-size="sm"
+                  id="open-dialog"
+                >
+                  Open dialog
+                </button>
+              </div>
+              <dialog id="sg-dialog" class="dialog" aria-labelledby="sg-dialog-title">
+                <div>
+                  <header>
+                    <h2 id="sg-dialog-title">Delete “Weekly report”?</h2>
+                    <p>
+                      The task, its comments and its history are removed. This cannot be undone.
+                    </p>
+                  </header>
+                  <footer>
+                    <button
+                      type="button"
+                      class="btn"
+                      data-variant="outline"
+                      data-size="sm"
+                      onclick="this.closest('dialog').close()"
+                    >
+                      Cancel</button
+                    ><button
+                      type="button"
+                      class="btn"
+                      data-variant="destructive"
+                      data-size="sm"
+                      onclick="this.closest('dialog').close()"
+                    >
+                      Delete task
+                    </button>
+                  </footer>
+                </div>
+              </dialog>
+            </section>
+
+            <section class="lg:col-span-2">
+              <h2 class="font-medium">Table</h2>
+              <div class="table-container mt-3 rounded-lg border bg-card">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Title</th>
+                      <th>Priority</th>
+                      <th>Status</th>
+                      <th class="text-right">Due</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="font-mono text-xs text-muted-foreground">TF-3</td>
+                      <td>Fix the login bug</td>
+                      <td><span class="badge" data-variant="outline">High</span></td>
+                      <td>
+                        <span class="inline-flex items-center gap-2"
+                          ><span class="status-dot bg-status-todo"></span>To do</span
+                        >
+                      </td>
+                      <td class="text-right text-xs text-status-blocked">2d late</td>
+                    </tr>
+                    <tr>
+                      <td class="font-mono text-xs text-muted-foreground">TF-5</td>
+                      <td>Review the colour palette</td>
+                      <td><span class="badge" data-variant="secondary">Medium</span></td>
+                      <td>
+                        <span class="inline-flex items-center gap-2"
+                          ><span class="status-dot bg-status-progress"></span>In progress</span
+                        >
+                      </td>
+                      <td class="text-right text-xs text-muted-foreground">Fri</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section>
+              <h2 class="font-medium">Empty state</h2>
+              <div class="mt-3 rounded-lg border bg-card">
+                <section class="empty py-10">
+                  <header>
+                    <figure
+                      class="mb-2 grid size-10 place-items-center rounded-lg bg-muted text-muted-foreground"
+                    >
+                      <svg class="lucide" aria-hidden="true">
+                        <use href="vendor/lucide.svg#circle-check" />
+                      </svg>
+                    </figure>
+                    <h3>Nothing due</h3>
+                    <p>You have no open tasks. New tasks assigned to you will show up here.</p>
+                  </header>
+                </section>
+              </div>
+            </section>
+
+            <section>
+              <h2 class="font-medium">Loading</h2>
+              <div class="mt-3 divide-y rounded-lg border bg-card" aria-busy="true">
+                <div class="flex items-center gap-3 px-4 py-3">
+                  <div class="skeleton size-2 rounded-full"></div>
+                  <div class="skeleton h-3 w-14"></div>
+                  <div class="skeleton h-3 flex-1"></div>
+                </div>
+                <div class="flex items-center gap-3 px-4 py-3">
+                  <div class="skeleton size-2 rounded-full"></div>
+                  <div class="skeleton h-3 w-14"></div>
+                  <div class="skeleton h-3 flex-1"></div>
+                </div>
+                <div class="flex items-center gap-3 px-4 py-3">
+                  <div class="skeleton size-2 rounded-full"></div>
+                  <div class="skeleton h-3 w-14"></div>
+                  <div class="skeleton h-3 flex-1"></div>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <h2 class="font-medium">Alert</h2>
+              <div class="mt-3 rounded-lg border bg-card p-4">
+                <div class="alert" data-variant="destructive" role="alert">
+                  <svg class="lucide" aria-hidden="true">
+                    <use href="vendor/lucide.svg#circle-alert" />
+                  </svg>
+                  <h2>Could not load this</h2>
+                  <section>
+                    <p>Only the project manager can see its report</p>
+                    <button type="button" class="btn" data-variant="outline" data-size="sm">
+                      Try again
+                    </button>
+                  </section>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <h2 class="font-medium">Toast</h2>
+              <div class="mt-3 rounded-lg border bg-card p-4">
+                <p class="text-muted-foreground">
+                  <code class="font-mono text-xs"
+                    >ui.toast({ category, title, description, action })</code
+                  >
+                </p>
+                <button
+                  type="button"
+                  class="btn mt-3"
+                  data-variant="outline"
+                  data-size="sm"
+                  id="show-toast"
+                >
+                  Show a toast
+                </button>
+              </div>
+            </section>
+
+            <section>
+              <h2 class="font-medium">Tabs</h2>
+              <div class="tabs mt-3" id="sg-tabs">
+                <nav role="tablist" aria-orientation="horizontal">
+                  <button
+                    type="button"
+                    role="tab"
+                    id="sg-tab-board"
+                    aria-controls="sg-panel-board"
+                    aria-selected="true"
+                    tabindex="0"
+                  >
+                    Board</button
+                  ><button
+                    type="button"
+                    role="tab"
+                    id="sg-tab-list"
+                    aria-controls="sg-panel-list"
+                    aria-selected="false"
+                    tabindex="-1"
+                  >
+                    List</button
+                  ><button
+                    type="button"
+                    role="tab"
+                    id="sg-tab-activity"
+                    aria-controls="sg-panel-activity"
+                    aria-selected="false"
+                    tabindex="-1"
+                  >
+                    Activity
+                  </button>
+                </nav>
+                <div
+                  role="tabpanel"
+                  id="sg-panel-board"
+                  aria-labelledby="sg-tab-board"
+                  class="mt-3 rounded-lg border bg-card p-4"
+                >
+                  Board panel
+                </div>
+                <div
+                  role="tabpanel"
+                  id="sg-panel-list"
+                  aria-labelledby="sg-tab-list"
+                  class="mt-3 rounded-lg border bg-card p-4"
+                  hidden
+                >
+                  List panel
+                </div>
+                <div
+                  role="tabpanel"
+                  id="sg-panel-activity"
+                  aria-labelledby="sg-tab-activity"
+                  class="mt-3 rounded-lg border bg-card p-4"
+                  hidden
+                >
+                  Activity panel
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </main>
+    <ol id="toaster" class="toaster" aria-live="polite"></ol>
+    <script src="js/ui.js"></script>
+    <script>
+      document.getElementById('toggle-theme').addEventListener('click', () => {
+        const isDark = document.documentElement.classList.toggle('dark');
+        try {
+          localStorage.setItem('taskflow.theme', isDark ? 'dark' : 'light');
+        } catch {
+          // the switch still applies to this page
+        }
+      });
+      document
+        .getElementById('open-dialog')
+        .addEventListener('click', () => document.getElementById('sg-dialog').showModal());
+      document.getElementById('show-toast').addEventListener('click', () =>
+        ui.toast({
+          category: 'success',
+          title: 'Task moved to Done',
+          description: 'Weekly report',
+          action: { label: 'Undo', onClick: () => {} },
+        }),
+      );
+    </script>
+  </body>
+</html>

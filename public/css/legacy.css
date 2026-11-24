@@ -1,246 +1,158 @@
-:root {
-  --text: #1f2328;
-  --muted: #59636e;
-  --background: #f6f8fa;
-  --surface: #ffffff;
-  --border: #d0d7de;
-  --accent: #0969da;
-  --danger: #cf222e;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: system-ui, sans-serif;
-  color: var(--text);
-  background: var(--background);
-}
-
-a {
-  color: var(--accent);
-}
-
-a:hover {
-  text-decoration: underline;
-}
-
-h1,
-h2 {
-  line-height: 1.2;
-}
-
-.container {
+/*
+ * Legacy page styles from Milestone 2, kept only until each page is migrated to the
+ * design system (DESIGN.md). Every rule is scoped to main.container, so it never touches
+ * the shell from layout.js, and it uses the design tokens, so dark mode still works.
+ * When you migrate a page, remove its <link href="css/legacy.css">. Deleted in part B.
+ */
+main.container {
+  --legacy-surface: var(--card);
+  --legacy-muted: var(--muted-foreground);
   max-width: 960px;
   margin: 0 auto;
-  padding: 24px 16px;
+  padding: 24px 24px 48px;
 }
 
-.container > section {
+main.container h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+main.container h2 {
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+main.container > section {
   margin-top: 28px;
   padding-top: 16px;
   border-top: 1px solid var(--border);
 }
 
-/* Shared header (filled by js/layout.js) */
-.app-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 24px;
-  padding: 12px 16px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+main.container a {
+  color: var(--primary);
 }
 
-.app-name {
-  font-weight: 700;
-  color: var(--text);
-  text-decoration: none;
+main.container a:hover {
+  text-decoration: underline;
 }
 
-.app-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.app-nav a {
-  color: var(--muted);
-}
-
-.app-user {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-left: auto;
-}
-
-.notification-bell {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 9px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--text);
-  text-decoration: none;
-}
-
-.notification-count {
-  min-width: 1.5em;
-  padding: 1px 5px;
-  border-radius: 999px;
-  background: var(--accent);
-  color: white;
-  text-align: center;
-  font-size: 0.8em;
-  font-weight: 700;
-}
-
-.login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-width: 360px;
-  margin: 48px auto;
-}
-
-label {
+main.container label {
   display: block;
   margin: 10px 0 4px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
-input,
-select,
-textarea {
+main.container input,
+main.container select,
+main.container textarea {
   max-width: 100%;
-  padding: 8px 10px;
+  padding: 6px 10px;
   font: inherit;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
+  color: var(--foreground);
+  border: 1px solid var(--input);
+  border-radius: var(--radius);
+  background: var(--legacy-surface);
 }
 
-textarea {
+main.container textarea {
   min-height: 80px;
 }
 
-#new-task-form {
+main.container #new-task-form {
   margin-top: 24px;
   padding: 20px;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
+  border-radius: var(--radius);
+  background: var(--legacy-surface);
 }
 
-#new-task-form input,
-#new-task-form select,
-#new-task-form textarea {
+main.container #new-task-form input,
+main.container #new-task-form select,
+main.container #new-task-form textarea {
   display: block;
   width: 100%;
 }
 
-#filter-form {
+main.container #filter-form {
   display: flex;
   flex-wrap: wrap;
   align-items: end;
   gap: 8px 16px;
 }
 
-#filter-form label {
-  margin-bottom: 8px;
-}
-
-button {
-  padding: 8px 12px;
+main.container button:not(.btn) {
+  padding: 6px 12px;
   font: inherit;
-  color: white;
-  background: var(--accent);
-  border: 1px solid var(--accent);
-  border-radius: 6px;
+  font-weight: 500;
+  color: var(--primary-foreground);
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
   cursor: pointer;
 }
 
-button:hover:not(:disabled) {
-  filter: brightness(0.9);
-}
-
-button:disabled {
+main.container button:not(.btn):disabled {
   opacity: 0.55;
   cursor: default;
 }
 
-.button-secondary {
-  color: var(--text);
-  background: var(--surface);
+main.container .button-secondary {
+  color: var(--foreground);
+  background: var(--legacy-surface);
   border-color: var(--border);
 }
 
-#status-buttons {
+main.container #status-buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-main ul {
+main.container ul {
   padding-left: 0;
   list-style: none;
 }
 
-main li {
+main.container li {
   margin: 8px 0;
   padding: 10px 12px;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
+  border-radius: var(--radius);
+  background: var(--legacy-surface);
 }
 
-.form-error {
+main.container .form-error {
   min-height: 1.5em;
-  color: var(--danger);
+  color: var(--destructive);
 }
 
-.badge {
+main.container .badge:not([data-variant]) {
   display: inline-block;
-  padding: 3px 8px;
+  padding: 2px 8px;
   border-radius: 999px;
-  background: #ddf4ff;
-  color: #0550ae;
-  font-size: 0.8em;
-  font-weight: 700;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
-.badge-overdue {
-  background: #ffebe9;
-  color: var(--danger);
+main.container .badge-overdue {
+  background: var(--muted);
+  color: var(--status-blocked);
 }
 
-.notification-item {
+main.container .notification-item {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 12px;
 }
 
-.notification-item time {
-  color: var(--muted);
-  font-size: 0.9em;
+main.container .notification-item time {
+  color: var(--legacy-muted);
+  font-size: 0.875rem;
 }
 
-.notification-item button {
+main.container .notification-item button {
   margin-left: auto;
-}
-
-@media (max-width: 600px) {
-  .app-user {
-    margin-left: 0;
-  }
-
-  .notification-item button {
-    margin-left: 0;
-  }
 }
