@@ -85,13 +85,13 @@ function setup() {
 describe('ReportService.getProjectReport (US7-1)', () => {
   // Decision table: who asks × does the project exist → result
   it.each([
-    ['manager', MANAGER, true, 'report'],
-    ['member', MEMBER, true, ForbiddenError],
-    ['non-member', OUTSIDER, true, ForbiddenError],
-    ['manager', MANAGER, false, NotFoundError],
-    ['member', MEMBER, false, NotFoundError],
-    ['non-member', OUTSIDER, false, NotFoundError],
-  ])('US7-1 AC1 decision table: %s, project exists = %s → %p', (_who, user, exists, expected) => {
+    { who: 'manager', user: MANAGER, exists: true, expected: 'report' },
+    { who: 'member', user: MEMBER, exists: true, expected: ForbiddenError },
+    { who: 'non-member', user: OUTSIDER, exists: true, expected: ForbiddenError },
+    { who: 'manager', user: MANAGER, exists: false, expected: NotFoundError },
+    { who: 'member', user: MEMBER, exists: false, expected: NotFoundError },
+    { who: 'non-member', user: OUTSIDER, exists: false, expected: NotFoundError },
+  ])('US7-1 AC1 decision table: $who, project exists = $exists', ({ user, exists, expected }) => {
     const { service, website } = setup();
     const projectId = exists ? website.id : 99;
 
@@ -220,12 +220,37 @@ describe('ReportService.getDashboard (US7-3)', () => {
 
   // Boundary values around today for "overdue" and "due this week" (today = 2026-11-24)
   it.each([
-    ['yesterday, open', '2026-11-23', 'TO_DO', { overdue: 1, dueThisWeek: 0 }],
-    ['yesterday, done', '2026-11-23', 'DONE', { overdue: 0, dueThisWeek: 0 }],
-    ['today', TODAY, 'IN_PROGRESS', { overdue: 0, dueThisWeek: 1 }],
-    ['today + 6 (last day of the week)', '2026-11-30', 'TO_DO', { overdue: 0, dueThisWeek: 1 }],
-    ['today + 7', '2026-12-01', 'TO_DO', { overdue: 0, dueThisWeek: 0 }],
-  ])('US7-3 AC2 a task due %s', (_case, dueDate, status, expected) => {
+    {
+      due: 'yesterday, open',
+      dueDate: '2026-11-23',
+      status: 'TO_DO',
+      expected: { overdue: 1, dueThisWeek: 0 },
+    },
+    {
+      due: 'yesterday, done',
+      dueDate: '2026-11-23',
+      status: 'DONE',
+      expected: { overdue: 0, dueThisWeek: 0 },
+    },
+    {
+      due: 'today',
+      dueDate: TODAY,
+      status: 'IN_PROGRESS',
+      expected: { overdue: 0, dueThisWeek: 1 },
+    },
+    {
+      due: 'today + 6 (last day of the week)',
+      dueDate: '2026-11-30',
+      status: 'TO_DO',
+      expected: { overdue: 0, dueThisWeek: 1 },
+    },
+    {
+      due: 'today + 7',
+      dueDate: '2026-12-01',
+      status: 'TO_DO',
+      expected: { overdue: 0, dueThisWeek: 0 },
+    },
+  ])('US7-3 AC2 a task due $due', ({ dueDate, status, expected }) => {
     const { service, taskRepository } = setup();
     addTask(taskRepository, { dueDate, status });
 
