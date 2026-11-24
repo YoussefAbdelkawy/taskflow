@@ -22,6 +22,7 @@ const SessionRepository = require('./data-access/repositories/SessionRepository'
 const TaskDependencyRepository = require('./data-access/repositories/TaskDependencyRepository');
 const CommentRepository = require('./data-access/repositories/CommentRepository');
 const NotificationRepository = require('./data-access/repositories/NotificationRepository');
+const ReportRepository = require('./data-access/repositories/ReportRepository');
 
 const PasswordHasher = require('./data-access/security/PasswordHasher');
 const EventPublisher = require('./business/events/EventPublisher');
@@ -33,6 +34,7 @@ const DependencyService = require('./business/services/DependencyService');
 const ProjectService = require('./business/services/ProjectService');
 const CommentService = require('./business/services/CommentService');
 const NotificationService = require('./business/services/NotificationService');
+const ReportService = require('./business/services/ReportService');
 
 const HealthController = require('./presentation/controllers/HealthController');
 const AuthController = require('./presentation/controllers/AuthController');
@@ -42,6 +44,7 @@ const DependencyController = require('./presentation/controllers/DependencyContr
 const ProjectController = require('./presentation/controllers/ProjectController');
 const CommentController = require('./presentation/controllers/CommentController');
 const NotificationController = require('./presentation/controllers/NotificationController');
+const ReportController = require('./presentation/controllers/ReportController');
 
 const { createAuthenticate } = require('./presentation/middleware/authenticate');
 const Scheduler = require('./presentation/scheduler/Scheduler');
@@ -59,6 +62,7 @@ function createContainer({ databasePath, schedulerIntervalMs = config.schedulerI
     taskDependency: new TaskDependencyRepository(db),
     comment: new CommentRepository(db),
     notification: new NotificationRepository(db),
+    report: new ReportRepository(db),
   };
   const passwordHasher = new PasswordHasher();
 
@@ -108,6 +112,13 @@ function createContainer({ databasePath, schedulerIntervalMs = config.schedulerI
     taskRepository: repositories.task,
     projectRepository: repositories.project,
   });
+  // FR7: reports and the dashboard only read data
+  services.report = new ReportService({
+    reportRepository: repositories.report,
+    projectRepository: repositories.project,
+    taskRepository: repositories.task,
+    authorizationService: services.authorization,
+  });
   // FR2 listens for TASK_COMPLETED (TaskService publishes it from turn 2 on)
   eventPublisher.subscribe(services.recurrence);
   eventPublisher.subscribe(services.notification);
@@ -122,6 +133,7 @@ function createContainer({ databasePath, schedulerIntervalMs = config.schedulerI
     project: new ProjectController({ projectService: services.project }),
     comment: new CommentController({ commentService: services.comment }),
     notification: new NotificationController({ notificationService: services.notification }),
+    report: new ReportController({ reportService: services.report }),
   };
   const middleware = { authenticate: createAuthenticate(services.auth) };
   // Built here, started only by server.js

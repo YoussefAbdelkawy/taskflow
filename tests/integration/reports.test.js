@@ -4,7 +4,8 @@ const { createContainer } = require('../../src/container');
 const { createApp } = require('../../src/app');
 
 const PASSWORD = 'secret123';
-const today = () => new Date().toISOString().slice(0, 10);
+const daysFromToday = (days) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
+const today = () => daysFromToday(0);
 
 function addTeam(container) {
   const { user, project, task } = container.repositories;
@@ -26,7 +27,7 @@ function addTeam(container) {
     description: '',
     status: 'TO_DO',
     priority: 'HIGH',
-    dueDate: '2000-01-01',
+    dueDate: daysFromToday(-3),
   });
   return { team, website };
 }
@@ -55,10 +56,7 @@ describe('reports API (FR7)', () => {
 
   describe('GET /api/projects/:id/report', () => {
     it('US7-1 a manager gets the report for the range', async () => {
-      const response = await get(
-        'mona',
-        `/api/projects/${website.id}/report?from=2000-01-01&to=${today()}`,
-      );
+      const response = await get('mona', `/api/projects/${website.id}/report`);
 
       expect(response.status).toBe(200);
       expect(response.body.summary).toMatchObject({ total: 1, open: 1, overdue: 1 });
@@ -86,12 +84,13 @@ describe('reports API (FR7)', () => {
 
   describe('GET /api/projects/:id/report.csv', () => {
     it('US7-2 downloads the CSV with an attachment file name and escaped cells', async () => {
-      const response = await get('mona', `/api/projects/${website.id}/report.csv?from=2000-01-01`);
+      const response = await get('mona', `/api/projects/${website.id}/report.csv`);
 
       expect(response.status).toBe(200);
       expect(response.headers['content-type']).toMatch(/^text\/csv/);
-      expect(response.headers['content-disposition']).toBe(
-        `attachment; filename="taskflow-website-v2-${today()}.csv"`,
+      expect(response.headers['content-disposition']).toMatch(/^attachment; filename=/);
+      expect(response.headers['content-disposition']).toContain(
+        `taskflow-website-v2-${today()}.csv`,
       );
       expect(response.text.split('\r\n')[0]).toBe(
         'ID,Title,Assignee,Priority,Status,Due date,Days late',

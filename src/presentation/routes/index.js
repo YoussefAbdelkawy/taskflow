@@ -56,6 +56,11 @@ function createRoutes({ controllers, authenticate }) {
   router.get('/notifications/unread-count', controllers.notification.unreadCount);
   router.patch('/notifications/:id/read', controllers.notification.markRead);
 
+  // FR7: reports (managers only) and the personal dashboard
+  router.get('/projects/:id/report', controllers.report.getReport);
+  router.get('/projects/:id/report.csv', controllers.report.exportCsv);
+  router.get('/dashboard', controllers.report.getDashboard);
+
   // 4. Anything else under /api: a JSON 404 through errorHandler (must stay last)
   router.use((req) => {
     throw new NotFoundError(`No such API route: ${req.method} ${req.originalUrl}`);
