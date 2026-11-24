@@ -55,10 +55,11 @@ describe('FR1 pages', () => {
     ).toBe(true);
   });
 
-  it('index.html links to the seeded project', async () => {
+  it('US7-3 index.html (the dashboard) links to projects from its "Project progress" list', async () => {
     const { text } = await request(app).get('/index.html');
 
-    expect(text).toContain('href="project.html?id=1"');
+    expect(text).toContain('id="project-progress"');
+    expect(text).toContain('href="projects.html"');
   });
 
   it.each(['/js/project.js', '/js/task.js'])('serves %s', async (url) => {
