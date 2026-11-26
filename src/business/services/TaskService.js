@@ -10,6 +10,16 @@ const { sortByDueDate, SortOrder } = require('../rules/taskSorting');
 
 // Due dates are stored as text YYYY-MM-DD (team contract)
 const DUE_DATE_FORMAT = /^\d{4}-\d{2}-\d{2}$/;
+// US8-2: the longest title create and edit accept (after trimming)
+const MAX_TITLE_LENGTH = 200;
+// US8-2: the only fields an edit may change; status has its own rule (changeStatus)
+const EDITABLE_FIELDS = Object.freeze([
+  'title',
+  'description',
+  'priority',
+  'dueDate',
+  'assigneeId',
+]);
 // FR6: a blocked task cannot move to these statuses (moving back to TO_DO is always allowed)
 const STATUSES_NEEDING_UNBLOCKED = Object.freeze([TaskStatus.IN_PROGRESS, TaskStatus.DONE]);
 
@@ -31,6 +41,9 @@ const isRealDate = (text) => {
 function checkTaskFields({ title, description, dueDate, priority }) {
   // Imperative: one guard clause per field, stop at the first problem
   if (typeof title !== 'string' || !title.trim()) throw new ValidationError('Title is required');
+  if (title.trim().length > MAX_TITLE_LENGTH) {
+    throw new ValidationError(`Title must be at most ${MAX_TITLE_LENGTH} characters`);
+  }
   // Optional, but if given it must be text (SQLite cannot store an object: that was a 500)
   if (typeof (description ?? '') !== 'string') {
     throw new ValidationError('Description must be text');
@@ -40,6 +53,16 @@ function checkTaskFields({ title, description, dueDate, priority }) {
   // Declarative: "is it one of the Priority values?" instead of three comparisons
   if (!isPriority(priority)) throw new ValidationError('Priority must be LOW, MEDIUM or HIGH');
 }
+
+// Keeps only the editable fields that were sent, so an edit cannot touch status or project.
+const pickEdits = (changes) =>
+  // Declarative: "the allowed fields that have a value", not a loop over the input
+  Object.fromEntries(
+    EDITABLE_FIELDS.filter((field) => changes[field] !== undefined).map((field) => [
+      field,
+      changes[field],
+    ]),
+  );
 
 // The event shape every observer receives (team contract)
 const taskEvent = (type, { task, actorId }) => ({
@@ -251,6 +274,41 @@ class TaskService {
   getHistory(taskId, user) {
     const task = this.getTask(taskId, user);
     return this.historyRepository.findByTask(task.id);
+  }
+
+  /**
+   * @param {{ taskId: number, changes: { title?: string, description?: string,
+   *           priority?: string, dueDate?: string, assigneeId?: number }, user: { id: number } }} edit
+   * @returns {object} the updated task
+   * requires: user is logged in
+   * effects: saves only the editable fields that were sent (status and project are ignored)
+   *          and returns the task; publishes TASK_ASSIGNED when the assignee changes.
+   *          Throws, in this order: NotFoundError if the task does not exist;
+   *          ForbiddenError if user is not a manager of its project; ValidationError if the
+   *          new assignee is not a project member or a field is invalid (same rules as create)
+   * modifies: the tasks table; the observers of the EventPublisher
+   */
+  updateTask({ taskId, changes = {}, user }) {
+    // Imperative: guard clauses in a fixed order (404, 403, 400), then save
+    const task = this.#findTask(taskId);
+    if (!this.authorizationService.isManager(user.id, task.projectId)) {
+      throw new ForbiddenError('Only a project manager can edit tasks');
+    }
+    const edits = pickEdits(changes);
+    const isNewAssignee = edits.assigneeId !== undefined && edits.assigneeId !== task.assigneeId;
+    if (isNewAssignee && !this.authorizationService.isMember(edits.assigneeId, task.projectId)) {
+      throw new ValidationError('The assignee must be a member of the project');
+    }
+    checkTaskFields({ ...task, ...edits });
+    if (edits.title !== undefined) edits.title = edits.title.trim();
+
+    const updated = this.taskRepository.update(task.id, edits);
+    if (isNewAssignee) {
+      this.eventPublisher.publish(
+        taskEvent(EventNames.TASK_ASSIGNED, { task: updated, actorId: user.id }),
+      );
+    }
+    return updated;
   }
 
   #findTask(taskId) {
