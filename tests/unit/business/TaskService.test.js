@@ -711,4 +711,53 @@ describe('TaskService', () => {
       expectUnchanged();
     });
   });
+
+  describe('deleteTask (FR8)', () => {
+    let task;
+
+    // A TO_DO task assigned to Karim
+    beforeEach(() => {
+      task = service.createTask(newTask(), mona);
+    });
+
+    it('US8-3 a manager deletes a task → it is gone', () => {
+      service.deleteTask(task.id, mona);
+
+      expect(taskRepository.findById(task.id)).toBeNull();
+    });
+
+    // Decision table: who asks × does the task exist → result (404 is checked before 403)
+    it.each([
+      { who: 'manager', user: mona, exists: true, expected: 'ok' },
+      { who: 'assignee (member)', user: karim, exists: true, expected: ForbiddenError },
+      { who: 'other member', user: omar, exists: true, expected: ForbiddenError },
+      { who: 'non-member', user: hany, exists: true, expected: ForbiddenError },
+      { who: 'manager', user: mona, exists: false, expected: NotFoundError },
+      { who: 'non-member', user: hany, exists: false, expected: NotFoundError },
+    ])('US8-3 $who deletes, task exists = $exists', ({ user, exists, expected }) => {
+      const taskId = exists ? task.id : 999;
+
+      if (expected === 'ok') {
+        service.deleteTask(taskId, user);
+        expect(taskRepository.findById(task.id)).toBeNull();
+        return;
+      }
+      expect(() => service.deleteTask(taskId, user)).toThrow(expected);
+      expect(taskRepository.findById(task.id)).toEqual(task);
+    });
+
+    it('US8-3 a member gets 403 with a clear message', () => {
+      expect(() => service.deleteTask(task.id, karim)).toThrow(
+        new ForbiddenError('Only a project manager can delete tasks'),
+      );
+    });
+
+    it('US8-3 deleting the same task twice → 404 the second time', () => {
+      service.deleteTask(task.id, mona);
+
+      expect(() => service.deleteTask(task.id, mona)).toThrow(
+        new NotFoundError(`Task ${task.id} not found`),
+      );
+    });
+  });
 });
