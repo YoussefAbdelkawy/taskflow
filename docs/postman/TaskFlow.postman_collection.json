@@ -48,6 +48,10 @@
     {
       "key": "tomorrow",
       "value": ""
+    },
+    {
+      "key": "taskC",
+      "value": ""
     }
   ],
   "event": [
@@ -2434,6 +2438,317 @@
                 "exec": [
                   "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
                   "pm.test(\"has counts, next tasks and projects\", () => { const body = pm.response.json(); pm.expect(body.stats).to.have.all.keys(\"open\",\"dueThisWeek\",\"overdue\",\"done\"); pm.expect(body.dueSoon.length).to.be.at.most(6); pm.expect(body.projects).to.be.an(\"array\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "11. FR8 Edit and delete tasks",
+      "item": [
+        {
+          "name": "Create task C for Karim (to edit and delete)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "projects", "{{projectId}}", "tasks"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Task C\",\n  \"assigneeId\": {{karimId}},\n  \"dueDate\": \"{{tomorrow}}\",\n  \"priority\": \"MEDIUM\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"taskC\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "US8-2 Mona edits task C",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskC}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskC}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Task C (renamed)\",\n  \"priority\": \"HIGH\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"title and priority saved, status unchanged\", () => { const body = pm.response.json(); pm.expect(body.title).to.eql(\"Task C (renamed)\"); pm.expect(body.priority).to.eql(\"HIGH\"); pm.expect(body.status).to.eql(\"TO_DO\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "US8-2 A 201-character title",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskC}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskC}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error message is \\\"Title must be at most 200 characters\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"Title must be at most 200 characters\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "US8-2 A member cannot edit",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskC}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskC}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Mine now\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"error message is \\\"Only a project manager can edit tasks\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"Only a project manager can edit tasks\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "US8-2 An outsider cannot edit",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hanyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskC}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskC}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Mine now\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test(\"status is 403\", () => pm.response.to.have.status(403));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "US8-2 Edit a task that does not exist",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "999999"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Ghost\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"error message is \\\"Task 999999 not found\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"Task 999999 not found\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "US8-3 A member cannot delete",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{karimToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskC}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskC}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"error message is \\\"Only a project manager can delete tasks\\\"\", () => { const body = pm.response.json(); pm.expect(body.error).to.eql(\"Only a project manager can delete tasks\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "US8-3 Mona deletes task C",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskC}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskC}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 204\", () => pm.response.to.have.status(204));",
+                  "pm.test(\"no body\", () => pm.expect(pm.response.text()).to.eql(\"\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "US8-3 Task C is gone",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{monaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskC}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskC}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"not found\", () => pm.expect(pm.response.json().error).to.include(\"not found\"));"
                 ]
               }
             }

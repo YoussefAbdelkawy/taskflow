@@ -287,4 +287,126 @@ describe('tasks API (FR1)', () => {
       expect(response.status).toBe(403);
     });
   });
+
+  describe('PATCH /api/tasks/:id (FR8)', () => {
+    const editTask = (as, id, body) => {
+      const call = request(app).patch(`/api/tasks/${id}`).send(body);
+      return as ? call.set('Authorization', auth[as]) : call;
+    };
+
+    it('US8-2 a manager edits title, priority and due date → 200 with the saved task', async () => {
+      const created = (await createTask('mona')).body;
+
+      const response = await editTask('mona', created.id, {
+        title: 'Design the landing page',
+        priority: 'LOW',
+        dueDate: '2026-12-15',
+      });
+      const after = await getTask('mona', created.id);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        ...created,
+        title: 'Design the landing page',
+        priority: 'LOW',
+        dueDate: '2026-12-15',
+      });
+      expect(after.body).toEqual(response.body);
+    });
+
+    it('US8-2 AC2 reassigning to Omar puts the task in Omar’s list', async () => {
+      const created = (await createTask('mona')).body;
+
+      const response = await editTask('mona', created.id, { assigneeId: team.omar.id });
+      const omars = await request(app).get('/api/tasks/mine').set('Authorization', auth.omar);
+
+      expect(response.status).toBe(200);
+      expect(omars.body.map((task) => task.id)).toEqual([created.id]);
+    });
+
+    // Each row builds its body when the test runs, so it can use the team's real ids
+    it.each([
+      [
+        'a 201-character title',
+        () => ({ title: 'A'.repeat(201) }),
+        'Title must be at most 200 characters',
+      ],
+      ['an impossible due date', () => ({ dueDate: '2026-02-30' }), 'Due date is not a real date'],
+      [
+        'an assignee outside the project',
+        () => ({ assigneeId: team.hany.id }),
+        'The assignee must be a member of the project',
+      ],
+    ])('US8-2 AC1 %s → 400, nothing saved', async (_case, body, message) => {
+      const created = (await createTask('mona')).body;
+
+      const response = await editTask('mona', created.id, body());
+      const after = await getTask('mona', created.id);
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({ error: message });
+      expect(after.body).toEqual(created);
+    });
+
+    it.each([
+      ['no token', 401, null],
+      ['a member (the assignee)', 403, 'karim'],
+      ['a user outside the project', 403, 'hany'],
+    ])('US8-2 AC3 edited by %s → %i, nothing saved', async (_case, status, as) => {
+      const created = (await createTask('mona')).body;
+
+      const response = await editTask(as, created.id, { title: 'Hijacked' });
+      const after = await getTask('mona', created.id);
+
+      expect(response.status).toBe(status);
+      expect(after.body.title).toBe(created.title);
+    });
+
+    it('US8-2 an unknown task → 404 with the task message', async () => {
+      const response = await editTask('mona', 999, { title: 'Renamed' });
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({ error: 'Task 999 not found' });
+    });
+  });
+
+  describe('DELETE /api/tasks/:id (FR8)', () => {
+    const deleteTask = (as, id) => {
+      const call = request(app).delete(`/api/tasks/${id}`);
+      return as ? call.set('Authorization', auth[as]) : call;
+    };
+
+    it('US8-3 a manager deletes a task → 204 with no body, and it is gone', async () => {
+      const created = (await createTask('mona')).body;
+
+      const response = await deleteTask('mona', created.id);
+      const after = await getTask('mona', created.id);
+
+      expect(response.status).toBe(204);
+      expect(response.text).toBe('');
+      expect(after.status).toBe(404);
+      expect(after.body).toEqual({ error: `Task ${created.id} not found` });
+    });
+
+    it.each([
+      ['no token', 401, null],
+      ['a member (the assignee)', 403, 'karim'],
+      ['a user outside the project', 403, 'hany'],
+    ])('US8-3 deleted by %s → %i, the task stays', async (_case, status, as) => {
+      const created = (await createTask('mona')).body;
+
+      const response = await deleteTask(as, created.id);
+      const after = await getTask('mona', created.id);
+
+      expect(response.status).toBe(status);
+      expect(after.body).toEqual(created);
+    });
+
+    it('US8-3 an unknown task → 404 with the task message', async () => {
+      const response = await deleteTask('mona', 999);
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({ error: 'Task 999 not found' });
+    });
+  });
 });

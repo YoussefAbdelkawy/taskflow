@@ -394,6 +394,49 @@ const paths = {
         404: notFound,
       },
     },
+    patch: {
+      tags: ['Tasks (FR8)'],
+      summary: 'Edit a task (manager only); send only the fields to change',
+      description:
+        'Validated like create (title 1–200 characters, real YYYY-MM-DD date). ' +
+        'Status cannot be changed here; use PATCH /api/tasks/{id}/status. ' +
+        'A new assignee gets an ASSIGNED notification.',
+      parameters: [taskId],
+      requestBody: body(
+        {
+          type: 'object',
+          properties: {
+            title: { type: 'string', minLength: 1, maxLength: 200 },
+            description: { type: 'string' },
+            assigneeId: { type: 'integer' },
+            dueDate: { type: 'string', format: 'date' },
+            priority: { type: 'string', enum: values(Priority) },
+          },
+        },
+        { title: 'Design the landing page', priority: 'LOW' },
+      ),
+      responses: {
+        200: reply('Updated task', ref('Task')),
+        400: invalid,
+        401: notLoggedIn,
+        403: error('Not a manager of the task’s project'),
+        404: notFound,
+      },
+    },
+    delete: {
+      tags: ['Tasks (FR8)'],
+      summary: 'Delete a task (manager only)',
+      description:
+        'Its status history, comments, notifications and dependency links are removed with it, ' +
+        'so tasks that depended on it are no longer blocked.',
+      parameters: [taskId],
+      responses: {
+        204: { description: 'Deleted (no body)' },
+        401: notLoggedIn,
+        403: error('Not a manager of the task’s project'),
+        404: notFound,
+      },
+    },
   },
   '/api/tasks/{id}/status': {
     patch: {

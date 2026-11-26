@@ -560,4 +560,204 @@ describe('TaskService', () => {
       expect(() => service.getTasks({}, 'sideways', karim)).toThrow(ValidationError);
     });
   });
+
+  describe('updateTask (FR8)', () => {
+    let task;
+
+    // A TO_DO task assigned to Karim, with the TASK_ASSIGNED event cleared
+    beforeEach(() => {
+      task = service.createTask(newTask(), mona);
+      eventPublisher.events = [];
+    });
+
+    const update = (changes, user = mona, taskId = task.id) =>
+      service.updateTask({ taskId, changes, user });
+
+    const expectUnchanged = () => {
+      expect(taskRepository.findById(task.id)).toEqual(task);
+      expect(eventPublisher.events).toEqual([]);
+    };
+
+    it('US8-2 a manager edits title, description, priority and due date → saved and returned', () => {
+      const changes = {
+        title: 'Design the landing page',
+        description: 'Hero only',
+        priority: Priority.LOW,
+        dueDate: '2026-12-15',
+      };
+
+      const updated = update(changes);
+
+      expect(updated).toEqual({ ...task, ...changes });
+      expect(taskRepository.findById(task.id)).toEqual(updated);
+    });
+
+    it('US8-2 only the fields that are sent change', () => {
+      const updated = update({ priority: Priority.LOW });
+
+      expect(updated).toEqual({ ...task, priority: Priority.LOW });
+    });
+
+    it('US8-2 status and project cannot be changed by editing (status has its own rule)', () => {
+      const updated = update({ title: 'Renamed', status: TaskStatus.DONE, projectId: 99 });
+
+      expect(updated).toEqual({ ...task, title: 'Renamed' });
+    });
+
+    it('US8-2 the title is saved trimmed', () => {
+      expect(update({ title: '  Renamed  ' }).title).toBe('Renamed');
+    });
+
+    // Equivalence partitioning + boundary values on the title length (max 200 characters)
+    it.each([
+      ['empty (invalid)', '', ValidationError],
+      ['only spaces (invalid)', '   ', ValidationError],
+      ['1 character (lower boundary)', 'A', null],
+      ['200 characters (upper boundary)', 'A'.repeat(200), null],
+      ['201 characters (just over)', 'A'.repeat(201), ValidationError],
+    ])('US8-2 title %s', (_case, title, error) => {
+      if (error) {
+        expect(() => update({ title })).toThrow(error);
+        expectUnchanged();
+        return;
+      }
+      expect(update({ title }).title).toBe(title);
+    });
+
+    // Equivalence partitioning + boundary values on the due date (a real YYYY-MM-DD day)
+    it.each([
+      ['a normal day', '2026-12-31', null],
+      ['the last day of February (boundary)', '2026-02-28', null],
+      ['29 February in a leap year (boundary)', '2028-02-29', null],
+      ['29 February in a non-leap year (just over)', '2026-02-29', ValidationError],
+      ['month 13 (just over)', '2026-13-01', ValidationError],
+      ['words instead of a date', 'tomorrow', ValidationError],
+      ['an empty string', '', ValidationError],
+    ])('US8-2 due date: %s', (_case, dueDate, error) => {
+      if (error) {
+        expect(() => update({ dueDate })).toThrow(error);
+        expectUnchanged();
+        return;
+      }
+      expect(update({ dueDate }).dueDate).toBe(dueDate);
+    });
+
+    it.each([
+      ['a priority that is not LOW/MEDIUM/HIGH', { priority: 'URGENT' }],
+      ['a description that is not text', { description: { a: 1 } }],
+    ])('US8-2 rejects %s with 400 (validated like create)', (_case, changes) => {
+      expect(() => update(changes)).toThrow(ValidationError);
+      expectUnchanged();
+    });
+
+    it('US8-2 create uses the same title rule: 201 characters → 400', () => {
+      expect(() => service.createTask(newTask({ title: 'A'.repeat(201) }), mona)).toThrow(
+        ValidationError,
+      );
+    });
+
+    // Decision table: who asks × does the task exist → result (404 is checked before 403)
+    it.each([
+      { who: 'manager', user: mona, exists: true, expected: 'ok' },
+      { who: 'assignee (member)', user: karim, exists: true, expected: ForbiddenError },
+      { who: 'other member', user: omar, exists: true, expected: ForbiddenError },
+      { who: 'non-member', user: hany, exists: true, expected: ForbiddenError },
+      { who: 'manager', user: mona, exists: false, expected: NotFoundError },
+      { who: 'non-member', user: hany, exists: false, expected: NotFoundError },
+    ])('US8-2 $who edits, task exists = $exists', ({ user, exists, expected }) => {
+      const taskId = exists ? task.id : 999;
+
+      if (expected === 'ok') {
+        expect(update({ title: 'Renamed' }, user, taskId).title).toBe('Renamed');
+        return;
+      }
+      expect(() => update({ title: 'Renamed' }, user, taskId)).toThrow(expected);
+      expectUnchanged();
+    });
+
+    it('US8-2 AC3 a member gets 403 with a clear message', () => {
+      expect(() => update({ title: 'Renamed' }, karim)).toThrow(
+        new ForbiddenError('Only a project manager can edit tasks'),
+      );
+    });
+
+    it('US8-2 AC2 a new assignee gets TASK_ASSIGNED with the updated task', () => {
+      const updated = update({ assigneeId: omar.id });
+
+      expect(updated.assigneeId).toBe(omar.id);
+      expect(eventPublisher.events).toEqual([
+        {
+          type: EventNames.TASK_ASSIGNED,
+          task: updated,
+          actorId: mona.id,
+          occurredAt: expect.any(String),
+        },
+      ]);
+    });
+
+    it.each([
+      ['the assignee is not changed', { title: 'Renamed' }],
+      ['the same assignee is sent again', { assigneeId: karim.id }],
+    ])('US8-2 no TASK_ASSIGNED when %s', (_case, changes) => {
+      update(changes);
+
+      expect(eventPublisher.events).toEqual([]);
+    });
+
+    it('US8-2 an assignee outside the project → 400, nothing saved', () => {
+      expect(() => update({ assigneeId: hany.id })).toThrow(
+        new ValidationError('The assignee must be a member of the project'),
+      );
+      expectUnchanged();
+    });
+  });
+
+  describe('deleteTask (FR8)', () => {
+    let task;
+
+    // A TO_DO task assigned to Karim
+    beforeEach(() => {
+      task = service.createTask(newTask(), mona);
+    });
+
+    it('US8-3 a manager deletes a task → it is gone', () => {
+      service.deleteTask(task.id, mona);
+
+      expect(taskRepository.findById(task.id)).toBeNull();
+    });
+
+    // Decision table: who asks × does the task exist → result (404 is checked before 403)
+    it.each([
+      { who: 'manager', user: mona, exists: true, expected: 'ok' },
+      { who: 'assignee (member)', user: karim, exists: true, expected: ForbiddenError },
+      { who: 'other member', user: omar, exists: true, expected: ForbiddenError },
+      { who: 'non-member', user: hany, exists: true, expected: ForbiddenError },
+      { who: 'manager', user: mona, exists: false, expected: NotFoundError },
+      { who: 'non-member', user: hany, exists: false, expected: NotFoundError },
+    ])('US8-3 $who deletes, task exists = $exists', ({ user, exists, expected }) => {
+      const taskId = exists ? task.id : 999;
+
+      if (expected === 'ok') {
+        service.deleteTask(taskId, user);
+        expect(taskRepository.findById(task.id)).toBeNull();
+        return;
+      }
+      expect(() => service.deleteTask(taskId, user)).toThrow(expected);
+      expect(taskRepository.findById(task.id)).toEqual(task);
+    });
+
+    it('US8-3 a member gets 403 with a clear message', () => {
+      expect(() => service.deleteTask(task.id, karim)).toThrow(
+        new ForbiddenError('Only a project manager can delete tasks'),
+      );
+    });
+
+    it('US8-3 deleting the same task twice → 404 the second time', () => {
+      service.deleteTask(task.id, mona);
+
+      expect(() => service.deleteTask(task.id, mona)).toThrow(
+        new NotFoundError(`Task ${task.id} not found`),
+      );
+    });
+  });
 });

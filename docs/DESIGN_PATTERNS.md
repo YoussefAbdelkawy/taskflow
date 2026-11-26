@@ -10,7 +10,7 @@ One section per pattern: the problem, the pattern, where it is in the code, why 
 | Strategy (recurrence)                 | FR2           | Youssef              | `src/business/rules/recurrence/`        |
 | Builder (reports)                     | FR7           | Youssef              | `src/business/reports/ReportBuilder.js` |
 | Strategy (export formats)             | FR7           | Youssef              | `src/business/reports/exporters/`       |
-| Command                               | FR8           | Nazmy                | `public/js/board/commands.js` (to do)   |
+| Command                               | FR8           | Nazmy                | `public/js/board/commands.js`           |
 | Observer subscriber `ActivityService` | FR9           | Ali                  | to do                                   |
 | Facade                                | FR11          | Mostafa              | `SearchService` (to do)                 |
 | Factory Method                        | FR12          | Tony                 | `NotificationFactory` (to do)           |
@@ -77,7 +77,11 @@ One section per pattern: the problem, the pattern, where it is in the code, why 
 
 ## Command (FR8, Nazmy)
 
-To do: problem → pattern → where → why it beats the alternative → how to extend it.
+- **Problem:** a card on the Kanban board can be moved three ways: drag-and-drop, the keyboard (NFR8: Space, ←/→, Space) and the toast's "Undo" (US8-1 AC3). Each move must show at once (optimistic update), save `PATCH /api/tasks/:id/status`, snap back with a toast when the server refuses (403, or 409 "Task is blocked", US8-1 AC2), and be undoable afterwards.
+- **Pattern:** each move is an object that can do and undo itself. `MoveTaskCommand` stores `{ taskId, from, to }` and has `execute()` and `undo()`, which share one private `#moveTo(status, fallback)`: move the card, save, put it back and rethrow on failure. `CommandHistory` is the invoker: `run(command)` remembers a move only after the server accepted it, and `undo()` reverses the last one (it stays remembered if the undo itself fails, so Undo can be pressed again).
+- **Where:** `public/js/board/commands.js` (the commands, no DOM); used by `public/js/board/board.js`, where drag (`drop` event), the keyboard (`drop()` after Space) and the toast's Undo all end in `history.run(new MoveTaskCommand(…))` or `history.undo()`. The board gives the command a `view` with `moveCard(taskId, status)` and the shared `api`.
+- **Why not call the API in each handler:** drag, keyboard and Undo would each carry their own copy of "move, save, roll back, report", and the copies would drift (one forgets the snap-back, another the toast). Undo would also need to remember what changed by hand. With commands there is one tested path: `tests/unit/public/commands.test.js` checks execute, the 409 snap-back, undo, a failed undo and the history order with a fake api and a fake view, without a browser.
+- **Extend:** a new kind of board action (for example "assign to me" or moving a card to another project) is one new class with `execute()` and `undo()`; `CommandHistory`, the toast's Undo and the keyboard handling work with it unchanged.
 
 ## Observer subscriber `ActivityService` (FR9, Ali)
 

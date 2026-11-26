@@ -64,6 +64,7 @@ The frontend stays plain HTML + JavaScript in `public/` (no framework, no build 
 | **Strategy**                 | `src/business/rules/recurrence/`: `RecurrenceStrategy` → `Daily`, `Weekly`, `MonthlyRecurrence`; picked by `strategyFor.js`                                     | Adding "yearly" = one new class + one table entry; no `if/else` chain in the service                  |
 | **Builder** (FR7)            | `src/business/reports/ReportBuilder.js`, used by `ReportService.getProjectReport`                                                                               | Optional report sections assembled step by step; frozen result. See `docs/DESIGN_PATTERNS.md`         |
 | **Strategy** (FR7 export)    | `src/business/reports/exporters/`: `CsvExporter`, `JsonExporter`, picked by `exporterFor.js`                                                                    | A new export format is one class + one table entry                                                    |
+| **Command** (FR8)            | `public/js/board/commands.js`: `MoveTaskCommand` (`execute`/`undo`) and `CommandHistory`, used by `public/js/board/board.js`                                    | Drag, keyboard moves and Undo share one path: optimistic move, save, snap back and toast on failure   |
 | **Template / abstract base** | `BaseRepository`, `RecurrenceStrategy`, `TaskObserver` throw "not implemented"                                                                                  | Defines the contract each subclass must fulfil                                                        |
 | **Middleware chain**         | `authenticate.js`, `errorHandler.js`                                                                                                                            | Cross-cutting concerns (auth, errors) in one place, not repeated in each controller                   |
 
@@ -92,6 +93,6 @@ the code for `// Imperative:` and `// Declarative:` to list them all.
 
 ## 5. API surface
 
-29 endpoints, all under `/api`. Milestone 3 added `GET /api/projects/:id/report`, `GET /api/projects/:id/report.csv` and `GET /api/dashboard` (FR7). See them live at <http://localhost:3000/api-docs> (Swagger) or run
+31 endpoints, all under `/api`. Milestone 3 added `GET /api/projects/:id/report`, `GET /api/projects/:id/report.csv` and `GET /api/dashboard` (FR7), and `PATCH /api/tasks/:id` (edit a task, manager only, validated like create) and `DELETE /api/tasks/:id` (204; history, comments, notifications and dependency links go with it through `ON DELETE CASCADE`) (FR8). See them live at <http://localhost:3000/api-docs> (Swagger) or run
 `docs/postman/TaskFlow.postman_collection.json`. `tests/integration/apiDocs.test.js` fails if a
 route is added without being documented.

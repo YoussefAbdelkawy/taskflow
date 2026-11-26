@@ -41,6 +41,8 @@ function createRoutes({ controllers, authenticate }) {
   router.get('/projects/:projectId/members', controllers.task.listAssignees);
   router.get('/tasks/mine', controllers.task.listMine);
   router.get('/tasks/:id', controllers.task.getById);
+  router.patch('/tasks/:id', controllers.task.update); // FR8 US8-2
+  router.delete('/tasks/:id', controllers.task.remove); // FR8 US8-3
   router.patch('/tasks/:id/status', controllers.task.changeStatus);
   router.get('/tasks/:id/history', controllers.task.getHistory);
 
