@@ -6,30 +6,160 @@
     <title>Task – TaskFlow</title>
     <script src="js/theme.js"></script>
     <link rel="stylesheet" href="css/app.css" />
-    <!-- remove when this page is migrated to DESIGN.md -->
-    <link rel="stylesheet" href="css/legacy.css" />
     <script src="vendor/basecoat.min.js" defer></script>
   </head>
   <body>
     <header id="app-header"></header>
-    <!-- FR1: one task (opened as task.html?id=…): details, status buttons and the status history -->
-    <main class="container">
-      <p id="task-error" class="form-error" role="alert"></p>
-      <section id="task-details"></section>
+    <!-- FR1 + FR8 (US8-2, US8-3): one task, opened as task.html?id=…
+         Main column: title, description, history, comments, activity.
+         Right panel: status, assignee, priority, due date, repeats, dependencies. -->
+    <main class="mx-auto max-w-6xl px-4 py-8 md:px-6" data-breadcrumb="Task">
+      <!-- Error state (the server's message + "Try again") replaces the page while shown -->
+      <div id="task-error" class="rounded-lg border bg-card" hidden></div>
 
-      <h2>Status</h2>
-      <div id="status-buttons"></div>
-      <p id="status-message" class="form-error" role="alert"></p>
+      <div id="task-page" class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <div id="task-main" class="min-w-0">
+          <section id="task-details">
+            <div class="flex flex-wrap items-start justify-between gap-4">
+              <div class="min-w-0">
+                <a id="task-project" class="eyebrow hover:underline" href="projects.html"
+                  >Project</a
+                >
+                <h1 id="task-title" class="mt-1 text-2xl font-semibold break-words">Loading…</h1>
+              </div>
+              <div id="task-actions" class="flex gap-2" hidden>
+                <button
+                  type="button"
+                  class="btn"
+                  data-variant="outline"
+                  data-size="sm"
+                  id="edit-task"
+                >
+                  <svg class="lucide" aria-hidden="true">
+                    <use href="vendor/lucide.svg#pencil" />
+                  </svg>
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  class="btn"
+                  data-variant="destructive"
+                  data-size="sm"
+                  id="delete-task"
+                >
+                  <svg class="lucide" aria-hidden="true">
+                    <use href="vendor/lucide.svg#trash-2" />
+                  </svg>
+                  Delete
+                </button>
+              </div>
+            </div>
+            <p id="task-description" class="mt-4 whitespace-pre-line text-muted-foreground"></p>
+          </section>
 
-      <h2>History</h2>
-      <ul id="history"></ul>
+          <section class="mt-8" aria-labelledby="history-title">
+            <h2 id="history-title" class="font-medium">Status history</h2>
+            <ul id="history" class="mt-3 divide-y rounded-lg border bg-card"></ul>
+          </section>
 
-      <!-- FR2 (Youssef): filled by js/recurrence.js -->
-      <section id="recurrence"></section>
-      <!-- FR6 (Ali, turn 3) and FR4 (Fady, turn 4) fill these and add their own script tags -->
-      <section id="dependencies"></section>
-      <section id="comments"></section>
+          <!-- FR4 / FR10 (Fady) fills the comments; FR9 (Ali) fills the task's activity -->
+          <div class="mt-8">
+            <section id="comments"></section>
+          </div>
+          <div class="mt-8">
+            <section id="task-activity"></section>
+          </div>
+        </div>
+
+        <aside id="task-properties" aria-label="Task properties" class="min-w-0">
+          <div class="rounded-lg border bg-card p-4 text-sm">
+            <h2 class="text-xs text-muted-foreground">Status</h2>
+            <div id="status-buttons" class="mt-2 flex flex-wrap gap-1"></div>
+            <p id="status-message" class="mt-2 text-xs text-destructive" role="alert"></p>
+
+            <dl class="mt-4 grid grid-cols-[6rem_minmax(0,1fr)] gap-x-3 gap-y-3">
+              <dt class="text-muted-foreground">Assignee</dt>
+              <dd id="task-assignee" class="flex items-center gap-2"></dd>
+              <dt class="text-muted-foreground">Priority</dt>
+              <dd id="task-priority"></dd>
+              <dt class="text-muted-foreground">Due date</dt>
+              <dd id="task-due"></dd>
+            </dl>
+          </div>
+
+          <!-- FR2 (Youssef) fills the repeats setting; FR6 / FR9 (Ali) fills the dependencies -->
+          <div class="mt-4 rounded-lg border bg-card p-4 text-sm">
+            <section id="recurrence"></section>
+          </div>
+          <div class="mt-4 rounded-lg border bg-card p-4 text-sm">
+            <section id="dependencies"></section>
+          </div>
+        </aside>
+      </div>
+
+      <dialog id="edit-task-dialog" class="dialog" aria-labelledby="edit-task-title">
+        <div>
+          <header>
+            <h2 id="edit-task-title">Edit task</h2>
+            <p>Changes are saved for everyone. A new assignee is notified.</p>
+          </header>
+          <form id="edit-task-form" class="grid gap-4">
+            <section class="grid gap-4">
+              <div class="field">
+                <label for="edit-title">Title</label>
+                <input id="edit-title" name="title" class="input" maxlength="200" required />
+              </div>
+              <div class="field">
+                <label for="edit-description">Description</label>
+                <textarea
+                  id="edit-description"
+                  name="description"
+                  class="textarea"
+                  rows="3"
+                ></textarea>
+              </div>
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div class="field">
+                  <label for="edit-assignee">Assignee</label>
+                  <select
+                    id="edit-assignee"
+                    name="assigneeId"
+                    class="select input"
+                    required
+                  ></select>
+                </div>
+                <div class="field">
+                  <label for="edit-due">Due date</label>
+                  <input id="edit-due" name="dueDate" type="date" class="input" required />
+                </div>
+              </div>
+              <div class="field">
+                <label for="edit-priority">Priority</label>
+                <select id="edit-priority" name="priority" class="select input" required>
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HIGH">High</option>
+                </select>
+              </div>
+              <p id="edit-task-message" class="text-sm text-destructive" role="alert"></p>
+            </section>
+            <footer>
+              <button
+                type="button"
+                class="btn"
+                data-variant="outline"
+                data-size="sm"
+                id="edit-task-cancel"
+              >
+                Cancel
+              </button>
+              <button type="submit" class="btn" data-size="sm">Save changes</button>
+            </footer>
+          </form>
+        </div>
+      </dialog>
     </main>
+    <ol id="toaster" class="toaster" aria-live="polite"></ol>
     <script src="js/api.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/layout.js"></script>
