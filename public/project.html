@@ -6,41 +6,166 @@
     <title>Project – TaskFlow</title>
     <script src="js/theme.js"></script>
     <link rel="stylesheet" href="css/app.css" />
-    <!-- remove when this page is migrated to DESIGN.md -->
-    <link rel="stylesheet" href="css/legacy.css" />
     <script src="vendor/basecoat.min.js" defer></script>
   </head>
   <body>
     <header id="app-header"></header>
-    <!-- FR1: the project's tasks, and the "New task" form for its manager (opened as project.html?id=…) -->
-    <main class="container">
-      <h1>Project tasks</h1>
-      <p id="project-error" class="form-error" role="alert"></p>
-      <ul id="task-list"></ul>
+    <!-- FR8 (US8-1, NFR8): project.html?id=… with Board · List · Activity · Settings tabs.
+         Filled by js/board/commands.js, js/board/board.js and js/project.js -->
+    <main class="mx-auto max-w-6xl px-4 py-8 md:px-6" data-breadcrumb="Project">
+      <div id="project-header" class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p class="eyebrow">Project</p>
+          <h1 id="project-name" class="mt-1 text-2xl font-semibold">Loading…</h1>
+        </div>
+        <button type="button" class="btn" data-size="sm" id="new-task" hidden>
+          <svg class="lucide" aria-hidden="true"><use href="vendor/lucide.svg#plus" /></svg>
+          New task
+        </button>
+      </div>
 
-      <form id="new-task-form" hidden>
-        <h2>New task</h2>
-        <label for="title">Title</label>
-        <input id="title" name="title" required />
-        <label for="description">Description</label>
-        <textarea id="description" name="description"></textarea>
-        <label for="assigneeId">Assignee</label>
-        <select id="assigneeId" name="assigneeId" required></select>
-        <label for="dueDate">Due date</label>
-        <input id="dueDate" name="dueDate" type="date" required />
-        <label for="priority">Priority</label>
-        <select id="priority" name="priority" required>
-          <option value="LOW">Low</option>
-          <option value="MEDIUM" selected>Medium</option>
-          <option value="HIGH">High</option>
-        </select>
-        <button type="submit">Create task</button>
-        <p id="new-task-message" class="form-error" role="alert"></p>
-      </form>
+      <!-- Error state (the server's message + "Try again") replaces the tabs while shown -->
+      <div id="project-error" class="mt-8 rounded-lg border bg-card" hidden></div>
+
+      <div id="project-body" class="mt-8">
+        <div class="tabs" id="project-tabs">
+          <nav role="tablist" aria-orientation="horizontal">
+            <button
+              type="button"
+              role="tab"
+              id="tab-board"
+              aria-controls="board-panel"
+              aria-selected="true"
+              tabindex="0"
+            >
+              Board
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="tab-list"
+              aria-controls="list-panel"
+              aria-selected="false"
+              tabindex="-1"
+            >
+              List
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="tab-activity"
+              aria-controls="activity-panel"
+              aria-selected="false"
+              tabindex="-1"
+            >
+              Activity
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="tab-settings"
+              aria-controls="settings-panel"
+              aria-selected="false"
+              tabindex="-1"
+            >
+              Settings
+            </button>
+          </nav>
+
+          <!-- Board: three columns; cards are draggable and keyboard-movable (NFR8) -->
+          <div role="tabpanel" id="board-panel" aria-labelledby="tab-board" class="mt-4">
+            <p id="board-help" class="sr-only">
+              Press Space to pick up a task, the left and right arrow keys to choose a column, Space
+              to drop it and Escape to cancel.
+            </p>
+            <div id="board" class="grid gap-4 md:grid-cols-3"></div>
+          </div>
+
+          <div role="tabpanel" id="list-panel" aria-labelledby="tab-list" class="mt-4" hidden>
+            <ul id="task-list" class="divide-y rounded-lg border bg-card"></ul>
+          </div>
+
+          <!-- FR9 (Ali) fills the activity feed; FR10 (Fady) fills the project settings -->
+          <div
+            role="tabpanel"
+            id="activity-panel"
+            aria-labelledby="tab-activity"
+            class="mt-4 min-h-24"
+            hidden
+          ></div>
+          <div
+            role="tabpanel"
+            id="settings-panel"
+            aria-labelledby="tab-settings"
+            class="mt-4 min-h-24"
+            hidden
+          ></div>
+        </div>
+      </div>
+
+      <!-- Screen readers hear every board move here (NFR8) -->
+      <p id="board-announcer" class="sr-only" role="status" aria-live="polite"></p>
+
+      <dialog id="new-task-dialog" class="dialog" aria-labelledby="new-task-title">
+        <div>
+          <header>
+            <h2 id="new-task-title">New task</h2>
+            <p>The assignee is notified straight away.</p>
+          </header>
+          <form id="new-task-form" class="grid gap-4">
+            <section class="grid gap-4">
+              <div class="field">
+                <label for="title">Title</label>
+                <input id="title" name="title" class="input" maxlength="200" required />
+              </div>
+              <div class="field">
+                <label for="description">Description</label>
+                <textarea id="description" name="description" class="textarea" rows="3"></textarea>
+              </div>
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div class="field">
+                  <label for="assigneeId">Assignee</label>
+                  <select id="assigneeId" name="assigneeId" class="select input" required></select>
+                </div>
+                <div class="field">
+                  <label for="dueDate">Due date</label>
+                  <input id="dueDate" name="dueDate" type="date" class="input" required />
+                </div>
+              </div>
+              <div class="field">
+                <label for="priority">Priority</label>
+                <select id="priority" name="priority" class="select input" required>
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM" selected>Medium</option>
+                  <option value="HIGH">High</option>
+                </select>
+              </div>
+              <p id="new-task-message" class="text-sm text-destructive" role="alert"></p>
+            </section>
+            <footer>
+              <button
+                type="button"
+                class="btn"
+                data-variant="outline"
+                data-size="sm"
+                id="new-task-cancel"
+              >
+                Cancel
+              </button>
+              <button type="submit" class="btn" data-size="sm">Create task</button>
+            </footer>
+          </form>
+        </div>
+      </dialog>
     </main>
+    <!-- Toasts ("Moved to Done · Undo", "Blocked by …"). Basecoat only sets up a toaster that
+         is in the page when it starts, so it is declared here like in styleguide.html. -->
+    <ol id="toaster" class="toaster" aria-live="polite"></ol>
     <script src="js/api.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/layout.js"></script>
+    <script src="js/board/commands.js"></script>
+    <script src="js/board/board.js"></script>
     <script src="js/project.js"></script>
   </body>
 </html>
