@@ -63,7 +63,8 @@ test.describe('FR8 task page', () => {
     await dialog.getByRole('button', { name: 'Save changes' }).click();
 
     await expect(dialog.getByText('Title is required')).toBeVisible();
-    await expect(dialog).toBeVisible();
+    // still open (Basecoat draws the panel inside <dialog>, so check a control in it)
+    await expect(dialog.getByRole('button', { name: 'Save changes' })).toBeVisible();
   });
 
   test('US8-2 AC3 a member sees the task but no Edit or Delete button', async ({ page }) => {
@@ -109,7 +110,9 @@ test.describe('FR8 task page', () => {
     await loginAs(page, 'hany');
     await page.goto('/task.html?id=1');
 
-    await expect(page.getByText('Only project members can see this task')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
+    // the page's own error box (the dependencies widget shows the same 403 in its panel)
+    const errorBox = page.locator('#task-error');
+    await expect(errorBox.getByText('Only project members can see this task')).toBeVisible();
+    await expect(errorBox.getByRole('button', { name: 'Try again' })).toBeVisible();
   });
 });
