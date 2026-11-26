@@ -4,6 +4,10 @@ const { test, expect, loginAs, resetDb, PASSWORD } = require('./fixtures');
 
 test.beforeAll(resetDb);
 
+// Tall enough for the whole board: if Playwright had to scroll in the middle of a drag, the
+// drag would start on whatever card is under the old mouse position instead of the right one.
+test.use({ viewport: { width: 1280, height: 1400 } });
+
 const column = (page, name) => page.getByRole('region', { name });
 const card = (page, columnName, title) =>
   column(page, columnName).getByRole('listitem').filter({ hasText: title });
@@ -58,8 +62,11 @@ test.describe('FR8 Kanban board', () => {
     await card(page, 'To do', 'Plan the user interviews').dragTo(column(page, 'In progress'));
 
     await expect(
-      page.getByText('Only the assignee or a project manager can change the status'),
+      page
+        .locator('#toaster')
+        .getByText('Only the assignee or a project manager can change the status'),
     ).toBeVisible();
+    await expect(announcer(page)).toContainText('Plan the user interviews could not be moved');
     await expect(card(page, 'To do', 'Plan the user interviews')).toBeVisible();
   });
 
@@ -85,6 +92,7 @@ test.describe('FR8 Kanban board', () => {
     await blockedCard.dragTo(column(page, 'In progress'));
 
     await expect(page.getByText('Blocked by Fix the login bug')).toBeVisible();
+    await expect(announcer(page)).toContainText('Prepare the launch email could not be moved');
     await expect(card(page, 'To do', 'Prepare the launch email')).toBeVisible();
   });
 
