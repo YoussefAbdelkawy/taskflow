@@ -311,6 +311,25 @@ class TaskService {
     return updated;
   }
 
+  /**
+   * @param {number} taskId
+   * @param {{ id: number }} user
+   * @returns {void}
+   * requires: user is logged in
+   * effects: deletes the task; the database removes its status history, comments,
+   *          notifications and dependency links with it (ON DELETE CASCADE), so tasks that
+   *          depended on it are no longer blocked. Throws, in this order: NotFoundError if the
+   *          task does not exist; ForbiddenError if user is not a manager of its project
+   * modifies: the tasks table and every table that references it
+   */
+  deleteTask(taskId, user) {
+    const task = this.#findTask(taskId);
+    if (!this.authorizationService.isManager(user.id, task.projectId)) {
+      throw new ForbiddenError('Only a project manager can delete tasks');
+    }
+    this.taskRepository.delete(task.id);
+  }
+
   #findTask(taskId) {
     const task = this.taskRepository.findById(taskId);
     if (!task) throw new NotFoundError(`Task ${taskId} not found`);
