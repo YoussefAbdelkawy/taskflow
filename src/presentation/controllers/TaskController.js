@@ -1,5 +1,6 @@
 /** HTTP in, JSON out for FR1. Ids from the URL and body become numbers; the rules live in TaskService. */
 const CREATED = 201;
+const NO_CONTENT = 204;
 
 class TaskController {
   constructor({ taskService }) {
@@ -43,6 +44,27 @@ class TaskController {
     res.json(
       this.taskService.changeStatus({ taskId: Number(req.params.id), status, user: req.user }),
     );
+  };
+
+  // FR8 US8-2: only the fields that were sent are passed on; an assigneeId becomes a number
+  update = (req, res) => {
+    const { title, description, priority, dueDate, assigneeId } = req.body ?? {};
+    const changes = {
+      title,
+      description,
+      priority,
+      dueDate,
+      assigneeId: assigneeId === undefined ? undefined : Number(assigneeId),
+    };
+    res.json(
+      this.taskService.updateTask({ taskId: Number(req.params.id), changes, user: req.user }),
+    );
+  };
+
+  // FR8 US8-3
+  remove = (req, res) => {
+    this.taskService.deleteTask(Number(req.params.id), req.user);
+    res.status(NO_CONTENT).end();
   };
 
   // FR5: GET /api/tasks?priority=HIGH&status=TO_DO&sort=asc (all optional).
